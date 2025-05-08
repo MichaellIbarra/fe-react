@@ -1,26 +1,26 @@
 
-"use client"; // Required for format from date-fns in href
+"use client"; 
 
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Activity, BarChart3, Users, CheckSquare, ScanBarcode } from "lucide-react";
-import { format } from 'date-fns';
+import { Activity, BarChart3, Users, CheckSquare } from "lucide-react";
+// import { format } from 'date-fns'; // No longer needed for QR link
 
 const QuickAccessItems = () => {
-  const todayDateString = format(new Date(), 'yyyy-MM-dd');
+  // const todayDateString = format(new Date(), 'yyyy-MM-dd'); // No longer needed
 
   const items = [
-    { title: "Registrar Asistencia", href: "/attendance", icon: CheckSquare, description: "Marcar la asistencia diaria de los estudiantes." },
-    { title: "Asistencia por QR", href: `/attendance/qr-scan?date=${todayDateString}`, icon: ScanBarcode, description: "Escanear QR para registrar asistencia." },
+    { title: "Registrar Asistencia", href: "/attendance", icon: CheckSquare, description: "Marcar la asistencia diaria de los estudiantes y escanear QR." },
+    // { title: "Asistencia por QR", href: `/attendance/qr-scan?date=${todayDateString}`, icon: ScanBarcode, description: "Escanear QR para registrar asistencia." }, // Removed
     { title: "Ingresar Notas", href: "/grades", icon: BarChart3, description: "Añadir y gestionar calificaciones." },
     { title: "Ver Estudiantes", href: "/students", icon: Users, description: "Consultar y administrar datos de estudiantes." },
     { title: "Chequeo con IA", href: "/anomaly-checker", icon: Activity, description: "Detectar anomalías en datos de estudiantes." },
   ];
 
   return (
-     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> {/* Adjusted grid for 4 items */}
       {items.map((item) => (
         <Card key={item.title} className="shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -61,4 +61,3 @@ export default function DashboardPage() {
     </DashboardLayout>
   );
 }
-

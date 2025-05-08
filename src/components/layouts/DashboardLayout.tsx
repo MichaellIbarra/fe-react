@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 "use client";
 
@@ -13,7 +14,7 @@ import {
   Sparkles,
   PanelLeft,
   School,
-  ScanBarcode, // Added ScanBarcode icon
+  // ScanBarcode, // Removed ScanBarcode icon
 } from 'lucide-react';
 // Removed AppLogo import as it's not directly used for the sidebar logo here
 import { UserNav } from '@/components/UserNav';
@@ -41,7 +42,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/attendance', label: 'Asistencia', icon: CalendarCheck },
-  { href: '/attendance/qr-scan', label: 'Asistencia QR', icon: ScanBarcode }, // Added QR Scan link
+  // { href: '/attendance/qr-scan', label: 'Asistencia QR', icon: ScanBarcode }, // Removed QR Scan link
   { href: '/grades', label: 'Notas', icon: GraduationCap },
   { href: '/reports', label: 'Informes', icon: FileText },
   { href: '/students', label: 'Estudiantes', icon: Users },
