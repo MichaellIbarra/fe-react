@@ -11,11 +11,13 @@ interface StudentContextType {
   updateStudent: (student: Student) => void;
   deleteStudent: (studentId: string) => void;
   getStudentById: (studentId: string) => Student | undefined;
+  isLoaded: boolean; // To indicate if data has been loaded from localStorage
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
-// This data will be used if localStorage is empty or fails to parse
+// This data will be used for the initial server render and the first client render
+// to ensure consistency and prevent hydration mismatches.
 const initialStudentsData: Student[] = [
   { id: "1", dni: "12345678", firstName: "Ana", lastName: "García", grade: "5to", section: "A", level: "Primaria", shift: "Mañana", guardianPhoneNumber: "987654321" },
   { id: "2", dni: "87654321", firstName: "Luis", lastName: "Martínez", grade: "3ro", section: "B", level: "Secundaria", shift: "Tarde", guardianPhoneNumber: "912345678" },
@@ -24,30 +26,40 @@ const initialStudentsData: Student[] = [
 
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const [students, setStudents] = useState<Student[]>(() => {
+  // Initialize with initialStudentsData. This ensures server and initial client render match.
+  const [students, setStudents] = useState<Student[]>(initialStudentsData);
+  const [isLoaded, setIsLoaded] = useState(false); // Flag to indicate when localStorage data is loaded
+
+  // Load students from localStorage on the client side after mount
+  useEffect(() => {
+    // This effect runs only on the client, after the initial render phase
     if (typeof window !== 'undefined') {
       try {
         const storedStudents = localStorage.getItem('students');
-        return storedStudents ? JSON.parse(storedStudents) : initialStudentsData;
+        if (storedStudents) {
+          setStudents(JSON.parse(storedStudents));
+        }
+        // If no stored students or parsing fails, it remains initialStudentsData, which is intended.
       } catch (error) {
         console.error("Error parsing students from localStorage:", error);
-        // Fallback to initial data if parsing fails
-        return initialStudentsData;
+        // Fallback to initialStudentsData if parsing fails, which is already the current state.
       }
+      setIsLoaded(true); // Mark that loading attempt from localStorage is complete
     }
-    // Default for SSR or if window is not defined yet
-    return initialStudentsData;
-  });
+  }, []); // Empty dependency array ensures this runs once on mount
 
+  // Persist students to localStorage whenever they change, but only after initial load from localStorage
   useEffect(() => {
-    // Persist students to localStorage whenever they change
-    if (typeof window !== 'undefined') {
+    // This effect runs only on the client
+    if (isLoaded && typeof window !== 'undefined') {
       localStorage.setItem('students', JSON.stringify(students));
     }
-  }, [students]);
+  }, [students, isLoaded]); // Re-run when students or isLoaded state changes
 
   const addStudent = (studentData: Omit<Student, 'id'>) => {
-    const newStudent: Student = { ...studentData, id: String(Date.now()) };
+    // Using Date.now() + a random string for client-generated IDs.
+    // For a production app, consider UUIDs for more robustness.
+    const newStudent: Student = { ...studentData, id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}` };
     setStudents(prevStudents => [...prevStudents, newStudent]);
   };
 
@@ -66,7 +78,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <StudentContext.Provider value={{ students, addStudent, updateStudent, deleteStudent, getStudentById }}>
+    <StudentContext.Provider value={{ students, addStudent, updateStudent, deleteStudent, getStudentById, isLoaded }}>
       {children}
     </StudentContext.Provider>
   );
