@@ -20,12 +20,15 @@ import type { Student } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
+const gradeOptions = ["1ro", "2do", "3ro", "4to", "5to"];
+const sectionOptions = ["A", "B", "C", "D", "E"];
+
 const studentSchema = z.object({
   dni: z.string().min(8, "El DNI debe tener al menos 8 caracteres.").max(15, "El DNI no debe exceder los 15 caracteres."),
   firstName: z.string().min(2, "El nombre debe tener al menos 2 caracteres.").max(50),
   lastName: z.string().min(2, "El apellido debe tener al menos 2 caracteres.").max(50),
   grade: z.string().min(1, "El grado es requerido."),
-  section: z.string().min(1, "La sección es requerida.").max(5),
+  section: z.string().min(1, "La sección es requerida."),
   level: z.enum(['Inicial', 'Primaria', 'Secundaria'], { required_error: "El nivel es requerido." }),
   shift: z.enum(['Mañana', 'Tarde', 'Noche'], { required_error: "El turno es requerido." }),
   guardianPhoneNumber: z.string().regex(/^\d{7,15}$/, "Número de celular inválido."),
@@ -256,12 +259,42 @@ export default function StudentsPage() {
                 </div>
                 <div>
                   <Label htmlFor="grade">Grado</Label>
-                  <Input id="grade" {...form.register("grade")} className={cn(form.formState.errors.grade && "border-destructive")} />
+                  <Controller
+                    control={form.control}
+                    name="grade"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <SelectTrigger id="grade" className={cn(form.formState.errors.grade && "border-destructive")}>
+                          <SelectValue placeholder="Seleccione grado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gradeOptions.map(option => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                   {form.formState.errors.grade && <p className="text-destructive text-sm mt-1">{form.formState.errors.grade.message}</p>}
                 </div>
                 <div>
                   <Label htmlFor="section">Sección</Label>
-                  <Input id="section" {...form.register("section")} className={cn(form.formState.errors.section && "border-destructive")} />
+                  <Controller
+                    control={form.control}
+                    name="section"
+                    render={({ field }) => (
+                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <SelectTrigger id="section" className={cn(form.formState.errors.section && "border-destructive")}>
+                          <SelectValue placeholder="Seleccione sección" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sectionOptions.map(option => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                   {form.formState.errors.section && <p className="text-destructive text-sm mt-1">{form.formState.errors.section.message}</p>}
                 </div>
                 <div>
