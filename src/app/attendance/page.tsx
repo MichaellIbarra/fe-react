@@ -38,21 +38,38 @@ const QrScannerModalContent: React.FC<{
   const { toast } = useToast();
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false); // Start as false, set to true after permission
+  const [isScanning, setIsScanning] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
-  // const videoRef = useRef<HTMLVideoElement>(null); // Not needed as QrScanner handles its own video element
 
+  const resetScanner = () => {
+    setScanResult(null);
+    setError(null);
+    setLastScannedData(null);
+    setIsScanning(false); // Will be set to true by getCameraPermission if successful
+    // Reset hasCameraPermission to null to re-trigger the permission check in useEffect
+    setHasCameraPermission(null); 
+    // toast({ title: "Reiniciando Escáner...", description: "Intentando acceder a la cámara." });
+  };
+  
   useEffect(() => {
-    let streamInstance: MediaStream | null = null;
-
     const getCameraPermission = async () => {
       if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+        let tempStream: MediaStream | null = null;
         try {
-          streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
+          // Request stream to check for permission.
+          tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          // If successful, permission is granted. Html5QrcodeScanner will acquire its own stream.
+          // Release this temporary one.
+          if (tempStream) {
+            tempStream.getTracks().forEach(track => track.stop());
+          }
           setHasCameraPermission(true);
           setIsScanning(true); // Enable scanning UI now
         } catch (err) {
+          if (tempStream) { // Ensure cleanup if somehow an error occurs after stream acquisition
+            tempStream.getTracks().forEach(track => track.stop());
+          }
           setHasCameraPermission(false);
           setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
           console.error("Camera permission error:", err);
@@ -68,18 +85,15 @@ const QrScannerModalContent: React.FC<{
       }
     };
 
-    if (hasCameraPermission === null) { // Only run if permission status is not yet determined
+    // This condition ensures getCameraPermission is called when the modal opens for the first time,
+    // or after resetScanner sets hasCameraPermission back to null.
+    if (hasCameraPermission === null) { 
         getCameraPermission();
     }
     
-
-    return () => {
-      // Cleanup: stop camera tracks when component unmounts or modal closes
-      if (streamInstance) {
-        streamInstance.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [toast, hasCameraPermission]); // Re-run if hasCameraPermission changes, though it's mostly for initial setup.
+    // No explicit stream cleanup needed here for a stream managed by this useEffect directly,
+    // as the tempStream is handled within getCameraPermission, and Html5QrcodeScanner manages its own stream.
+  }, [toast, hasCameraPermission]);
 
 
   const handleScanSuccess = (decodedText: string) => {
@@ -87,7 +101,7 @@ const QrScannerModalContent: React.FC<{
       return; 
     }
     setLastScannedData(decodedText);
-    setIsScanning(false); // Stop showing the scanner UI, show result
+    setIsScanning(false); 
     setScanResult(decodedText);
     setError(null);
 
@@ -120,26 +134,9 @@ const QrScannerModalContent: React.FC<{
   };
 
   const handleScanFailure = (errorMessage: string) => {
-    // console.warn(`QR Scan Failure: ${errorMessage}`);
-    // This can be noisy. Only set as a persistent error if needed.
-    // setError(`Error de escaneo intermitente: ${errorMessage}. Intente de nuevo.`);
-  };
-
-  const resetScanner = () => {
-    setScanResult(null);
-    setError(null);
-    setLastScannedData(null);
-    // Only set isScanning to true if camera permission is already granted
-    if (hasCameraPermission) {
-        setIsScanning(true); // Re-enable scanning UI
-    } else if (hasCameraPermission === null) {
-        // If permission state is unknown, re-trigger permission check
-        setHasCameraPermission(null); 
-    } else {
-        // If permission denied, show error
-        setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
-    }
-    toast({ title: "Escáner Reiniciado", description: "Listo para escanear un nuevo código." });
+    // console.warn(`QR Scan Failure (likely non-critical, e.g., no QR found): ${errorMessage}`);
+    // Avoid setting persistent error for transient scan issues unless it's a fatal error.
+    // Html5QrcodeScanner calls this frequently if no QR code is in view.
   };
   
   if (hasCameraPermission === null) {
@@ -162,19 +159,19 @@ const QrScannerModalContent: React.FC<{
         </AlertDescription>
       </Alert>
 
-      {!hasCameraPermission && ( // Show if permission is explicitly false
+      {!hasCameraPermission && ( 
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error de Cámara</AlertTitle>
           <AlertDescription>
-            No se pudo acceder a la cámara. Por favor, asegúrese de que la aplicación tiene permisos para usar la cámara en la configuración de su navegador e inténtelo de nuevo.
-            <Button onClick={resetScanner} variant="link" className="p-0 h-auto ml-1">Reintentar</Button>
+            {error || "No se pudo acceder a la cámara. Por favor, asegúrese de que la aplicación tiene permisos para usar la cámara en la configuración de su navegador e inténtelo de nuevo."}
+            <Button onClick={resetScanner} variant="link" className="p-0 h-auto ml-1 underline">Reintentar</Button>
           </AlertDescription>
         </Alert>
       )}
 
       {hasCameraPermission && isScanning && (
-         <div className="border-2 border-dashed border-primary/50 p-4 rounded-lg bg-primary/5 aspect-video flex items-center justify-center min-h-[300px]">
+         <div className="border-2 border-dashed border-primary/50 p-4 rounded-lg bg-primary/5 aspect-video flex items-center justify-center min-h-[300px] overflow-hidden">
           <QrScanner
             onScanSuccess={handleScanSuccess}
             onScanFailure={handleScanFailure}
@@ -193,15 +190,23 @@ const QrScannerModalContent: React.FC<{
           </AlertDescription>
         </Alert>
       )}
-      {error && !isScanning && ( // Only show error if not actively scanning
+      {error && !isScanning && !hasCameraPermission && ( // Show general error if not scanning and no permission
         <Alert variant="destructive">
           <XCircle className="h-5 w-5" />
           <AlertTitle>Error en Escaneo</AlertTitle>
+          <AlertDescription>{error} <Button onClick={resetScanner} variant="link" className="p-0 h-auto ml-1 underline">Reintentar</Button></AlertDescription>
+        </Alert>
+      )}
+       {error && !isScanning && hasCameraPermission && ( // Show QR processing error if had permission but processing failed
+        <Alert variant="destructive">
+          <XCircle className="h-5 w-5" />
+          <AlertTitle>Error al Procesar QR</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      {!isScanning && hasCameraPermission && ( // Show 'scan another' only if not scanning AND has permission
+
+      {!isScanning && hasCameraPermission && ( 
         <Button onClick={resetScanner} className="w-full">
           Escanear Otro Código
         </Button>
@@ -228,10 +233,10 @@ export default function AttendancePage() {
   useEffect(() => {
     const initialData: Record<string, AttendanceStatus> = {};
     mockStudents.forEach(student => {
-      initialData[student.id] = 'Presente'; // Default to Presente, can be changed
+      initialData[student.id] = 'Presente'; 
     });
     setAttendanceData(initialData);
-  }, []); // Run once on mount, not on selectedDate change to preserve manual changes
+  }, []); 
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendanceData(prevData => ({
@@ -249,7 +254,6 @@ export default function AttendancePage() {
       });
       return;
     }
-    // In a real app, save to backend: { date: selectedDate, records: attendanceData }
     console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), attendanceData);
     toast({
       title: "Asistencia Guardada",
@@ -270,7 +274,6 @@ export default function AttendancePage() {
   
   const handleAttendanceRecordedByQr = (studentId: string, studentName: string) => {
     handleStatusChange(studentId, 'Presente');
-    // Toast is handled by QrScannerModalContent to provide immediate feedback
   };
 
 
@@ -323,7 +326,7 @@ export default function AttendancePage() {
                     Apunte la cámara al QR del estudiante para registrar su asistencia.
                   </DialogDescription>
                 </DialogHeader>
-                {selectedDate && isQrScannerModalOpen && ( // Ensure modal is open before rendering content
+                {selectedDate && isQrScannerModalOpen && ( 
                   <QrScannerModalContent
                     selectedDate={selectedDate}
                     onAttendanceRecorded={handleAttendanceRecordedByQr}
@@ -351,7 +354,7 @@ export default function AttendancePage() {
                     {mockStudents.map((student) => (
                       <TableRow key={student.id}>
                         <TableCell>{student.firstName} {student.lastName}</TableCell>
-                        <TableCell>{student.grade} &quot;{student.section}&quot;</TableCell>
+                        <TableCell>{student.grade} "{student.section}"</TableCell>
                         <TableCell>
                           <Select
                             value={attendanceData[student.id] || 'Presente'}
@@ -405,3 +408,4 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
+
