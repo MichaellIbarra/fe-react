@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen } from "lucide-react";
+import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users } from "lucide-react";
 import type { Student, Grade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
@@ -271,3 +271,4 @@ export default function GradesPage() {
     </DashboardLayout>
   );
 }
+
