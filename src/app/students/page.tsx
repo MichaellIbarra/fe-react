@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // Removed DialogTrigger as it's used via Button
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
@@ -19,8 +19,9 @@ import { z } from "zod";
 import type { Student } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useStudentContext } from "@/contexts/StudentContext";
 
-const gradeOptions = ["1ro", "2do", "3ro", "4to", "5to", "Kinder"];
+const gradeOptions = ["Kinder", "1ro", "2do", "3ro", "4to", "5to"];
 const sectionOptions = ["A", "B", "C", "D", "E"];
 
 const studentSchema = z.object({
@@ -36,14 +37,8 @@ const studentSchema = z.object({
 
 type StudentFormData = z.infer<typeof studentSchema>;
 
-const initialStudents: Student[] = [
-  { id: "1", dni: "12345678", firstName: "Ana", lastName: "García", grade: "5to", section: "A", level: "Primaria", shift: "Mañana", guardianPhoneNumber: "987654321" },
-  { id: "2", dni: "87654321", firstName: "Luis", lastName: "Martínez", grade: "3ro", section: "B", level: "Secundaria", shift: "Tarde", guardianPhoneNumber: "912345678" },
-  { id: "3", dni: "11223344", firstName: "Sofía", lastName: "Rodríguez", grade: "Kinder", section: "C", level: "Inicial", shift: "Mañana", guardianPhoneNumber: "998877665" },
-];
-
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const { students, addStudent, updateStudent, deleteStudent } = useStudentContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
@@ -65,10 +60,10 @@ export default function StudentsPage() {
   });
 
   useEffect(() => {
-    if (isModalOpen) { // Only reset form when modal opens
+    if (isModalOpen) { 
       if (editingStudent) {
         form.reset(editingStudent);
-      } else {
+      } else if (!viewingStudent) { // Only reset to empty if not viewing
         form.reset({
           dni: "",
           firstName: "",
@@ -81,15 +76,15 @@ export default function StudentsPage() {
         });
       }
     }
-  }, [editingStudent, form, isModalOpen]);
+  }, [editingStudent, viewingStudent, form, isModalOpen]);
 
 
   const onSubmit = (data: StudentFormData) => {
     if (editingStudent) {
-      setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...data } : s));
+      updateStudent({ ...editingStudent, ...data });
       toast({ title: "Estudiante Actualizado", description: "Los datos del estudiante han sido actualizados." });
     } else {
-      setStudents([...students, { ...data, id: String(Date.now()) }]);
+      addStudent(data);
       toast({ title: "Estudiante Agregado", description: "El nuevo estudiante ha sido agregado." });
     }
     setIsModalOpen(false);
@@ -97,7 +92,7 @@ export default function StudentsPage() {
   };
 
   const handleDelete = (id: string) => {
-    setStudents(students.filter(s => s.id !== id));
+    deleteStudent(id);
     toast({ title: "Estudiante Eliminado", description: "El estudiante ha sido eliminado.", variant: "destructive" });
   };
 
@@ -216,7 +211,7 @@ export default function StudentsPage() {
           if (!isOpen) {
             setEditingStudent(null);
             setViewingStudent(null);
-            form.reset(); // Reset form when modal closes
+            form.reset(); 
           }
       }}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -238,6 +233,9 @@ export default function StudentsPage() {
                 <div><Label>Turno:</Label><p className="text-sm">{viewingStudent.shift}</p></div>
                 <div><Label>Celular Apoderado:</Label><p className="text-sm">{viewingStudent.guardianPhoneNumber}</p></div>
               </div>
+               <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cerrar</Button>
+              </DialogFooter>
             </div>
           ) : (
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -348,14 +346,8 @@ export default function StudentsPage() {
               </DialogFooter>
             </form>
           )}
-          {viewingStudent && (
-             <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cerrar</Button>
-            </DialogFooter>
-          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>
   );
 }
-

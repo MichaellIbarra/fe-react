@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, Camera, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
@@ -19,46 +19,43 @@ import type { Student, AttendanceRecord } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import QrCodeDisplay from "@/components/QrCodeDisplay";
 import QrScanner from "@/components/QrScanner";
-
-const mockStudents: Pick<Student, "id" | "firstName" | "lastName" | "grade" | "section">[] = [
-  { id: "1", firstName: "Ana", lastName: "García", grade: "5to", section: "A" },
-  { id: "2", firstName: "Luis", lastName: "Martínez", grade: "3ro", section: "B" },
-  { id: "3", firstName: "Sofía", lastName: "Rodríguez", grade: "Kinder", section: "C" },
-  { id: "4", firstName: "Carlos", lastName: "López", grade: "1ro", section: "A" },
-  { id: "5", firstName: "Laura", lastName: "Pérez", grade: "2do", section: "B" },
-];
+import { useStudentContext } from "@/contexts/StudentContext";
 
 type AttendanceStatus = AttendanceRecord["status"];
 
-const QrScannerModalContent: React.FC<{
+interface QrScannerModalContentProps {
   selectedDate: Date;
   onAttendanceRecorded: (studentId: string, studentName: string) => void;
   onClose: () => void;
-}> = ({ selectedDate, onAttendanceRecorded, onClose }) => {
+  getStudentById: (studentId: string) => Student | undefined;
+}
+
+const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedDate, onAttendanceRecorded, onClose, getStudentById }) => {
   const { toast } = useToast();
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null); // Added videoRef
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const resetScanner = () => {
     setScanResult(null);
     setError(null);
     setLastScannedData(null);
-    setIsScanning(false); 
+    // Re-initialize camera check to attempt getting permission again if it failed
     setHasCameraPermission(null); 
+    setIsScanning(false); // Explicitly set isScanning to false
   };
   
   useEffect(() => {
-    const getCameraPermission = async () => {
+    const requestCameraPermission = async () => {
       if (typeof navigator !== "undefined" && navigator.mediaDevices) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           setHasCameraPermission(true);
           setIsScanning(true); 
-          if (videoRef.current) { // Check if videoRef is available
+          if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
         } catch (err) {
@@ -77,17 +74,17 @@ const QrScannerModalContent: React.FC<{
       }
     };
 
-    if (hasCameraPermission === null) { 
-        getCameraPermission();
+    if (hasCameraPermission === null) { // Only request if permission status is unknown
+        requestCameraPermission();
     }
     
-    return () => { // Cleanup function
+    return () => { 
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [toast, hasCameraPermission]);
+  }, [toast, hasCameraPermission]); // hasCameraPermission in dependency array to re-run if reset
 
 
   const handleScanSuccess = (decodedText: string) => {
@@ -102,8 +99,8 @@ const QrScannerModalContent: React.FC<{
     try {
       const qrData = JSON.parse(decodedText);
       if (qrData.type === "eduassist_student_id" && qrData.studentId && qrData.studentName) {
-        const studentExists = mockStudents.some(s => s.id === qrData.studentId);
-        if (studentExists) {
+        const student = getStudentById(qrData.studentId);
+        if (student) {
           onAttendanceRecorded(qrData.studentId, qrData.studentName);
           toast({
             title: "Asistencia Registrada por QR",
@@ -128,7 +125,8 @@ const QrScannerModalContent: React.FC<{
   };
 
   const handleScanFailure = (errorMessage: string) => {
-    // console.warn(`QR Scan Failure (likely non-critical, e.g., no QR found): ${errorMessage}`);
+    // This can be noisy, log for debug if needed but don't show UI error unless critical
+    // console.warn(`QR Scan Failure: ${errorMessage}`);
   };
   
   if (hasCameraPermission === null) {
@@ -140,7 +138,6 @@ const QrScannerModalContent: React.FC<{
     );
   }
 
-
   return (
     <div className="space-y-6 p-2">
        <Alert variant="default">
@@ -151,7 +148,8 @@ const QrScannerModalContent: React.FC<{
         </AlertDescription>
       </Alert>
 
-      <video ref={videoRef} className="w-full aspect-video rounded-md hidden" autoPlay muted />
+      {/* Video element always present for srcObject binding, hidden via CSS if not actively scanning */}
+      <video ref={videoRef} className={`w-full aspect-video rounded-md ${!isScanning || !hasCameraPermission ? 'hidden' : ''}`} autoPlay muted />
 
 
       {!hasCameraPermission && ( 
@@ -185,7 +183,7 @@ const QrScannerModalContent: React.FC<{
           </AlertDescription>
         </Alert>
       )}
-      {error && !isScanning && !hasCameraPermission && ( 
+       {error && !isScanning && !hasCameraPermission && ( 
         <Alert variant="destructive">
           <XCircle className="h-5 w-5" />
           <AlertTitle>Error en Escaneo</AlertTitle>
@@ -202,7 +200,7 @@ const QrScannerModalContent: React.FC<{
 
 
       {!isScanning && hasCameraPermission && ( 
-        <Button onClick={resetScanner} className="w-full">
+        <Button onClick={() => { setScanResult(null); setError(null); setLastScannedData(null); setIsScanning(true);}} className="w-full">
           Escanear Otro Código
         </Button>
       )}
@@ -215,6 +213,7 @@ const QrScannerModalContent: React.FC<{
 
 
 export default function AttendancePage() {
+  const { students, getStudentById } = useStudentContext();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
   const { toast } = useToast();
@@ -227,11 +226,11 @@ export default function AttendancePage() {
 
   useEffect(() => {
     const initialData: Record<string, AttendanceStatus> = {};
-    mockStudents.forEach(student => {
+    students.forEach(student => {
       initialData[student.id] = 'Presente'; 
     });
     setAttendanceData(initialData);
-  }, []); 
+  }, [students]); 
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendanceData(prevData => ({
@@ -326,6 +325,7 @@ export default function AttendancePage() {
                     selectedDate={selectedDate}
                     onAttendanceRecorded={handleAttendanceRecordedByQr}
                     onClose={() => setIsQrScannerModalOpen(false)}
+                    getStudentById={getStudentById}
                   />
                 )}
               </DialogContent>
@@ -333,7 +333,7 @@ export default function AttendancePage() {
           </div>
         </CardHeader>
         <CardContent>
-          {mockStudents.length > 0 ? (
+          {students.length > 0 ? (
             <>
               <div className="overflow-x-auto">
                 <Table>
@@ -346,7 +346,7 @@ export default function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockStudents.map((student) => (
+                    {students.map((student) => (
                       <TableRow key={student.id}>
                         <TableCell>{student.firstName} {student.lastName}</TableCell>
                         <TableCell>{student.grade} "{student.section}"</TableCell>
@@ -403,4 +403,3 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
-

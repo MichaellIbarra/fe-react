@@ -20,12 +20,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-
-const mockStudents: Pick<Student, "id" | "firstName" | "lastName">[] = [
-  { id: "1", firstName: "Ana", lastName: "García" },
-  { id: "2", firstName: "Luis", lastName: "Martínez" },
-  { id: "3", firstName: "Sofía", lastName: "Rodríguez" },
-];
+import { useStudentContext } from "@/contexts/StudentContext";
 
 const mockSubjects: string[] = ["Matemáticas", "Comunicación", "Ciencias", "Personal Social", "Arte"];
 const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimestre 4"];
@@ -40,6 +35,7 @@ const gradeSchema = z.object({
 type GradeFormData = z.infer<typeof gradeSchema>;
 
 export default function GradesPage() {
+  const { students, getStudentById } = useStudentContext();
   const [grades, setGrades] = useState<Grade[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -111,6 +107,8 @@ export default function GradesPage() {
   };
 
   const filteredGrades = selectedStudentId ? grades.filter(g => g.studentId === selectedStudentId) : [];
+  const selectedStudentName = selectedStudentId ? getStudentById(selectedStudentId)?.firstName : 'el estudiante';
+
 
   return (
     <DashboardLayout>
@@ -138,7 +136,7 @@ export default function GradesPage() {
                 <SelectValue placeholder="Seleccione un estudiante..." />
               </SelectTrigger>
               <SelectContent>
-                {mockStudents.map(student => (
+                {students.map(student => (
                   <SelectItem key={student.id} value={student.id}>
                     {student.firstName} {student.lastName}
                   </SelectItem>
@@ -205,7 +203,7 @@ export default function GradesPage() {
           <DialogHeader>
             <DialogTitle>{editingGrade ? "Editar Nota" : "Agregar Nota"}</DialogTitle>
             <DialogDescription>
-              {editingGrade ? "Modifique los detalles de la nota." : `Complete los detalles de la nueva nota para ${mockStudents.find(s=>s.id === selectedStudentId)?.firstName || 'el estudiante'}.`}
+              {editingGrade ? "Modifique los detalles de la nota." : `Complete los detalles de la nueva nota para ${selectedStudentName}.`}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -272,4 +270,3 @@ export default function GradesPage() {
     </DashboardLayout>
   );
 }
-
