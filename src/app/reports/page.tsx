@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, Printer, CalendarCheck } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, CalendarCheck, Download } from "lucide-react";
 import type { Student, ProgressReport, Grade, AttendanceRecord } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -97,6 +98,23 @@ export default function ReportsPage() {
     }
   };
 
+  const handleExportReport = (format: 'pdf' | 'csv' | 'xls') => {
+    if (!reportData) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No hay informe generado para exportar.",
+      });
+      return;
+    }
+    // Placeholder for actual export logic
+    console.log(`Exporting report in ${format.toUpperCase()} format:`, reportData);
+    toast({
+      title: "Exportación Iniciada",
+      description: `Se está generando el informe en formato ${format.toUpperCase()}. (Funcionalidad simulada)`,
+    });
+  };
+
   const studentDetails = selectedStudentId ? mockStudents.find(s => s.id === selectedStudentId) : null;
 
   return (
@@ -158,9 +176,24 @@ export default function ReportsPage() {
                         <CardTitle className="text-xl text-primary">Informe de Progreso - {reportData.period}</CardTitle>
                         <CardDescription>Estudiante: {studentDetails.firstName} {studentDetails.lastName} - {studentDetails.grade} &quot;{studentDetails.section}&quot; ({studentDetails.level})</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => window.print()}>
-                        <Printer className="mr-2 h-4 w-4"/> Imprimir
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <Download className="mr-2 h-4 w-4"/> Descargar Informe
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleExportReport('pdf')}>
+                          Exportar como PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExportReport('csv')}>
+                          Exportar como CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExportReport('xls')}>
+                          Exportar como XLS
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
@@ -254,3 +287,4 @@ export default function ReportsPage() {
     </DashboardLayout>
   );
 }
+
