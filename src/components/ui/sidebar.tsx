@@ -171,7 +171,7 @@ const Sidebar = React.forwardRef<
       collapsible = "offcanvas",
       className,
       children,
-      ...props
+      ...props // Original props passed to Sidebar component
     },
     ref
   ) => {
@@ -193,8 +193,10 @@ const Sidebar = React.forwardRef<
     }
 
     if (isMobile) {
+      // Only pass relevant props to Sheet and SheetContent.
+      // Avoid passing props like 'collapsible' which are not supported by Sheet.
       return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <Sheet open={openMobile} onOpenChange={setOpenMobile} > {/* Removed {...props} */}
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
@@ -204,7 +206,7 @@ const Sidebar = React.forwardRef<
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
               } as React.CSSProperties
             }
-            side={side}
+            side={side} // 'side' is a valid prop for SheetContent
           >
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
@@ -215,11 +217,13 @@ const Sidebar = React.forwardRef<
     return (
       <div
         ref={ref}
-        className="group peer hidden md:block text-sidebar-foreground"
+        className={cn("group peer hidden md:block text-sidebar-foreground", className)} // Added className here for desktop
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
+        // {...props} could be added here if other div attributes are needed for desktop version.
+        // For now, only className is explicitly carried over.
       >
         {/* This is what handles the sidebar gap on desktop */}
         <div
@@ -241,10 +245,10 @@ const Sidebar = React.forwardRef<
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
-            className
+              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l"
+            // className from props is applied to the outer div above
           )}
-          {...props}
+          // {...props} are not spread here to avoid applying them to this inner structural div.
         >
           <div
             data-sidebar="sidebar"
