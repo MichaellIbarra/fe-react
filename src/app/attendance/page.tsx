@@ -38,23 +38,20 @@ const QrScannerModalContent: React.FC<{
   const { toast } = useToast();
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(true);
+  const [isScanning, setIsScanning] = useState(false); // Start as false, set to true after permission
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
+  // const videoRef = useRef<HTMLVideoElement>(null); // Not needed as QrScanner handles its own video element
 
   useEffect(() => {
+    let streamInstance: MediaStream | null = null;
+
     const getCameraPermission = async () => {
       if (typeof navigator !== "undefined" && navigator.mediaDevices) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
           setHasCameraPermission(true);
-           if (videoRef.current) { // Though QrScanner handles video, this is a check
-            videoRef.current.srcObject = stream; // This might not be needed if QrScanner handles it
-          }
-          // Stop tracks if QrScanner doesn't, to free up camera if modal is closed before scan
-          // stream.getTracks().forEach(track => track.stop()); 
+          setIsScanning(true); // Enable scanning UI now
         } catch (err) {
           setHasCameraPermission(false);
           setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
@@ -70,8 +67,19 @@ const QrScannerModalContent: React.FC<{
          setError("El acceso a multimedia no está disponible en este navegador.");
       }
     };
-    getCameraPermission();
-  }, [toast]);
+
+    if (hasCameraPermission === null) { // Only run if permission status is not yet determined
+        getCameraPermission();
+    }
+    
+
+    return () => {
+      // Cleanup: stop camera tracks when component unmounts or modal closes
+      if (streamInstance) {
+        streamInstance.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [toast, hasCameraPermission]); // Re-run if hasCameraPermission changes, though it's mostly for initial setup.
 
 
   const handleScanSuccess = (decodedText: string) => {
@@ -79,7 +87,7 @@ const QrScannerModalContent: React.FC<{
       return; 
     }
     setLastScannedData(decodedText);
-    setIsScanning(false);
+    setIsScanning(false); // Stop showing the scanner UI, show result
     setScanResult(decodedText);
     setError(null);
 
@@ -113,14 +121,24 @@ const QrScannerModalContent: React.FC<{
 
   const handleScanFailure = (errorMessage: string) => {
     // console.warn(`QR Scan Failure: ${errorMessage}`);
-    // setError(`Error de escaneo: ${errorMessage}`);
+    // This can be noisy. Only set as a persistent error if needed.
+    // setError(`Error de escaneo intermitente: ${errorMessage}. Intente de nuevo.`);
   };
 
   const resetScanner = () => {
     setScanResult(null);
     setError(null);
-    setIsScanning(true);
     setLastScannedData(null);
+    // Only set isScanning to true if camera permission is already granted
+    if (hasCameraPermission) {
+        setIsScanning(true); // Re-enable scanning UI
+    } else if (hasCameraPermission === null) {
+        // If permission state is unknown, re-trigger permission check
+        setHasCameraPermission(null); 
+    } else {
+        // If permission denied, show error
+        setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
+    }
     toast({ title: "Escáner Reiniciado", description: "Listo para escanear un nuevo código." });
   };
   
@@ -144,18 +162,19 @@ const QrScannerModalContent: React.FC<{
         </AlertDescription>
       </Alert>
 
-      {!hasCameraPermission && (
+      {!hasCameraPermission && ( // Show if permission is explicitly false
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error de Cámara</AlertTitle>
           <AlertDescription>
             No se pudo acceder a la cámara. Por favor, asegúrese de que la aplicación tiene permisos para usar la cámara en la configuración de su navegador e inténtelo de nuevo.
+            <Button onClick={resetScanner} variant="link" className="p-0 h-auto ml-1">Reintentar</Button>
           </AlertDescription>
         </Alert>
       )}
 
       {hasCameraPermission && isScanning && (
-         <div className="border-2 border-dashed border-primary/50 p-4 rounded-lg bg-primary/5 aspect-video flex items-center justify-center">
+         <div className="border-2 border-dashed border-primary/50 p-4 rounded-lg bg-primary/5 aspect-video flex items-center justify-center min-h-[300px]">
           <QrScanner
             onScanSuccess={handleScanSuccess}
             onScanFailure={handleScanFailure}
@@ -174,7 +193,7 @@ const QrScannerModalContent: React.FC<{
           </AlertDescription>
         </Alert>
       )}
-      {error && !isScanning && (
+      {error && !isScanning && ( // Only show error if not actively scanning
         <Alert variant="destructive">
           <XCircle className="h-5 w-5" />
           <AlertTitle>Error en Escaneo</AlertTitle>
@@ -182,7 +201,7 @@ const QrScannerModalContent: React.FC<{
         </Alert>
       )}
 
-      {!isScanning && (
+      {!isScanning && hasCameraPermission && ( // Show 'scan another' only if not scanning AND has permission
         <Button onClick={resetScanner} className="w-full">
           Escanear Otro Código
         </Button>
@@ -209,10 +228,10 @@ export default function AttendancePage() {
   useEffect(() => {
     const initialData: Record<string, AttendanceStatus> = {};
     mockStudents.forEach(student => {
-      initialData[student.id] = 'Presente';
+      initialData[student.id] = 'Presente'; // Default to Presente, can be changed
     });
     setAttendanceData(initialData);
-  }, [selectedDate]);
+  }, []); // Run once on mount, not on selectedDate change to preserve manual changes
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendanceData(prevData => ({
@@ -230,6 +249,7 @@ export default function AttendancePage() {
       });
       return;
     }
+    // In a real app, save to backend: { date: selectedDate, records: attendanceData }
     console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), attendanceData);
     toast({
       title: "Asistencia Guardada",
@@ -303,7 +323,7 @@ export default function AttendancePage() {
                     Apunte la cámara al QR del estudiante para registrar su asistencia.
                   </DialogDescription>
                 </DialogHeader>
-                {selectedDate && (
+                {selectedDate && isQrScannerModalOpen && ( // Ensure modal is open before rendering content
                   <QrScannerModalContent
                     selectedDate={selectedDate}
                     onAttendanceRecorded={handleAttendanceRecordedByQr}

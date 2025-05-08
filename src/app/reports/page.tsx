@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 "use client";
 
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, Printer } from "lucide-react";
+import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, Printer, CalendarCheck } from "lucide-react";
 import type { Student, ProgressReport, Grade, AttendanceRecord } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
