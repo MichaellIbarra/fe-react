@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 "use client";
 
@@ -61,19 +62,21 @@ export default function StudentsPage() {
   });
 
   useEffect(() => {
-    if (editingStudent) {
-      form.reset(editingStudent);
-    } else {
-      form.reset({
-        dni: "",
-        firstName: "",
-        lastName: "",
-        grade: "",
-        section: "",
-        level: undefined,
-        shift: undefined,
-        guardianPhoneNumber: "",
-      });
+    if (isModalOpen) { // Only reset form when modal opens
+      if (editingStudent) {
+        form.reset(editingStudent);
+      } else {
+        form.reset({
+          dni: "",
+          firstName: "",
+          lastName: "",
+          grade: "",
+          section: "",
+          level: undefined,
+          shift: undefined,
+          guardianPhoneNumber: "",
+        });
+      }
     }
   }, [editingStudent, form, isModalOpen]);
 
@@ -210,7 +213,7 @@ export default function StudentsPage() {
           if (!isOpen) {
             setEditingStudent(null);
             setViewingStudent(null);
-            form.reset();
+            form.reset(); // Reset form when modal closes
           }
       }}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -323,3 +326,4 @@ export default function StudentsPage() {
     </DashboardLayout>
   );
 }
+

@@ -41,35 +41,27 @@ const QrScannerModalContent: React.FC<{
   const [isScanning, setIsScanning] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null); // Added videoRef
 
   const resetScanner = () => {
     setScanResult(null);
     setError(null);
     setLastScannedData(null);
-    setIsScanning(false); // Will be set to true by getCameraPermission if successful
-    // Reset hasCameraPermission to null to re-trigger the permission check in useEffect
+    setIsScanning(false); 
     setHasCameraPermission(null); 
-    // toast({ title: "Reiniciando Escáner...", description: "Intentando acceder a la cámara." });
   };
   
   useEffect(() => {
     const getCameraPermission = async () => {
       if (typeof navigator !== "undefined" && navigator.mediaDevices) {
-        let tempStream: MediaStream | null = null;
         try {
-          // Request stream to check for permission.
-          tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          // If successful, permission is granted. Html5QrcodeScanner will acquire its own stream.
-          // Release this temporary one.
-          if (tempStream) {
-            tempStream.getTracks().forEach(track => track.stop());
-          }
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           setHasCameraPermission(true);
-          setIsScanning(true); // Enable scanning UI now
-        } catch (err) {
-          if (tempStream) { // Ensure cleanup if somehow an error occurs after stream acquisition
-            tempStream.getTracks().forEach(track => track.stop());
+          setIsScanning(true); 
+          if (videoRef.current) { // Check if videoRef is available
+            videoRef.current.srcObject = stream;
           }
+        } catch (err) {
           setHasCameraPermission(false);
           setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
           console.error("Camera permission error:", err);
@@ -85,14 +77,16 @@ const QrScannerModalContent: React.FC<{
       }
     };
 
-    // This condition ensures getCameraPermission is called when the modal opens for the first time,
-    // or after resetScanner sets hasCameraPermission back to null.
     if (hasCameraPermission === null) { 
         getCameraPermission();
     }
     
-    // No explicit stream cleanup needed here for a stream managed by this useEffect directly,
-    // as the tempStream is handled within getCameraPermission, and Html5QrcodeScanner manages its own stream.
+    return () => { // Cleanup function
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, [toast, hasCameraPermission]);
 
 
@@ -135,8 +129,6 @@ const QrScannerModalContent: React.FC<{
 
   const handleScanFailure = (errorMessage: string) => {
     // console.warn(`QR Scan Failure (likely non-critical, e.g., no QR found): ${errorMessage}`);
-    // Avoid setting persistent error for transient scan issues unless it's a fatal error.
-    // Html5QrcodeScanner calls this frequently if no QR code is in view.
   };
   
   if (hasCameraPermission === null) {
@@ -158,6 +150,9 @@ const QrScannerModalContent: React.FC<{
           Registrando asistencia para el: <strong>{format(selectedDate, "PPP", { locale: es })}</strong>.
         </AlertDescription>
       </Alert>
+
+      <video ref={videoRef} className="w-full aspect-video rounded-md hidden" autoPlay muted />
+
 
       {!hasCameraPermission && ( 
         <Alert variant="destructive">
@@ -190,14 +185,14 @@ const QrScannerModalContent: React.FC<{
           </AlertDescription>
         </Alert>
       )}
-      {error && !isScanning && !hasCameraPermission && ( // Show general error if not scanning and no permission
+      {error && !isScanning && !hasCameraPermission && ( 
         <Alert variant="destructive">
           <XCircle className="h-5 w-5" />
           <AlertTitle>Error en Escaneo</AlertTitle>
           <AlertDescription>{error} <Button onClick={resetScanner} variant="link" className="p-0 h-auto ml-1 underline">Reintentar</Button></AlertDescription>
         </Alert>
       )}
-       {error && !isScanning && hasCameraPermission && ( // Show QR processing error if had permission but processing failed
+       {error && !isScanning && hasCameraPermission && ( 
         <Alert variant="destructive">
           <XCircle className="h-5 w-5" />
           <AlertTitle>Error al Procesar QR</AlertTitle>
