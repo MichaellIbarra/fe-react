@@ -42,4 +42,10 @@ export interface ProgressReport {
   gradesBySubject: Array<{ subject: string; grade: string | number; comments?: string }>;
   behavioralObservations?: string; // Para tutorías (conductual)
   futRequests?: Array<{ date: string; reason: string; status: string }>; // Formato FUT
+  attendanceSummary?: { // Optional attendance summary
+    totalDays: number;
+    present: number;
+    absent: number;
+    late: number;
+  };
 }
