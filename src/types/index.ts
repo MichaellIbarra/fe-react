@@ -6,7 +6,7 @@ export interface Student {
   grade: string; // Grado (e.g., "1ro", "5to")
   section: string; // Sección (e.g., "A", "B")
   level: 'Inicial' | 'Primaria' | 'Secundaria'; // Nivel educativo
-  shift: 'Mañana' | 'Tarde' | 'Noche'; // Turno
+  shift: 'Mañana' | 'Tarde'; // Turno
   guardianPhoneNumber: string; // Celular del apoderado
 }
 

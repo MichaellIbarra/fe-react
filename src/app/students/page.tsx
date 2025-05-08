@@ -20,7 +20,7 @@ import type { Student } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-const gradeOptions = ["1ro", "2do", "3ro", "4to", "5to"];
+const gradeOptions = ["1ro", "2do", "3ro", "4to", "5to", "Kinder"];
 const sectionOptions = ["A", "B", "C", "D", "E"];
 
 const studentSchema = z.object({
@@ -30,7 +30,7 @@ const studentSchema = z.object({
   grade: z.string().min(1, "El grado es requerido."),
   section: z.string().min(1, "La sección es requerida."),
   level: z.enum(['Inicial', 'Primaria', 'Secundaria'], { required_error: "El nivel es requerido." }),
-  shift: z.enum(['Mañana', 'Tarde', 'Noche'], { required_error: "El turno es requerido." }),
+  shift: z.enum(['Mañana', 'Tarde'], { required_error: "El turno es requerido." }),
   guardianPhoneNumber: z.string().regex(/^\d{7,15}$/, "Número de celular inválido."),
 });
 
@@ -330,7 +330,6 @@ export default function StudentsPage() {
                         <SelectContent>
                           <SelectItem value="Mañana">Mañana</SelectItem>
                           <SelectItem value="Tarde">Tarde</SelectItem>
-                          <SelectItem value="Noche">Noche</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
