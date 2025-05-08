@@ -2,10 +2,11 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Activity, BarChart3, Users, CheckSquare } from "lucide-react";
+import { Activity, BarChart3, Users, CheckSquare, ScanBarcode } from "lucide-react";
 
 const quickAccessItems = [
   { title: "Registrar Asistencia", href: "/attendance", icon: CheckSquare, description: "Marcar la asistencia diaria de los estudiantes." },
+  { title: "Asistencia por QR", href: "/attendance/qr-scan", icon: ScanBarcode, description: "Escanear QR para registrar asistencia." },
   { title: "Ingresar Notas", href: "/grades", icon: BarChart3, description: "Añadir y gestionar calificaciones." },
   { title: "Ver Estudiantes", href: "/students", icon: Users, description: "Consultar y administrar datos de estudiantes." },
   { title: "Chequeo con IA", href: "/anomaly-checker", icon: Activity, description: "Detectar anomalías en datos de estudiantes." },
@@ -27,17 +28,17 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {quickAccessItems.map((item) => (
-            <Card key={item.title} className="shadow-md hover:shadow-lg transition-shadow duration-300">
+            <Card key={item.title} className="shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">{item.title}</CardTitle>
                 <item.icon className="w-6 h-6 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-grow flex flex-col justify-between">
                 <p className="text-sm text-muted-foreground mb-4">{item.description}</p>
                 <Link href={item.href} passHref legacyBehavior>
-                  <Button className="w-full">Ir a {item.title.split(" ")[0]}</Button>
+                  <Button className="w-full mt-auto">Ir a {item.title.split(" ")[0]}</Button>
                 </Link>
               </CardContent>
             </Card>
