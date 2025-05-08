@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 "use client";
 
@@ -9,11 +10,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarCheck, CalendarIcon, Users } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Student, AttendanceRecord } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import QrCodeDisplay from "@/components/QrCodeDisplay"; // New component for displaying QR
 
 const mockStudents: Pick<Student, "id" | "firstName" | "lastName" | "grade" | "section">[] = [
   { id: "1", firstName: "Ana", lastName: "García", grade: "5to", section: "A" },
@@ -30,11 +33,15 @@ export default function AttendancePage() {
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
   const { toast } = useToast();
 
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [selectedStudentForQr, setSelectedStudentForQr] = useState<Pick<Student, "id" | "firstName" | "lastName"> | null>(null);
+  const [qrValue, setQrValue] = useState("");
+
+
   useEffect(() => {
-    // Reset attendance data when date changes or component mounts
     const initialData: Record<string, AttendanceStatus> = {};
     mockStudents.forEach(student => {
-      initialData[student.id] = 'Presente'; // Default to 'Presente'
+      initialData[student.id] = 'Presente'; 
     });
     setAttendanceData(initialData);
   }, [selectedDate]);
@@ -55,8 +62,6 @@ export default function AttendancePage() {
       });
       return;
     }
-    // In a real app, you would save this data to a backend.
-    // For now, we'll just log it and show a toast.
     console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), attendanceData);
     toast({
       title: "Asistencia Guardada",
@@ -64,40 +69,66 @@ export default function AttendancePage() {
     });
   };
 
+  const handleShowQr = (student: Pick<Student, "id" | "firstName" | "lastName">) => {
+    setSelectedStudentForQr(student);
+    const qrData = {
+      type: "eduassist_student_id",
+      studentId: student.id,
+      studentName: `${student.firstName} ${student.lastName}`
+    };
+    setQrValue(JSON.stringify(qrData));
+    setIsQrModalOpen(true);
+  };
+
+  const getQrScanLink = () => {
+    if (selectedDate) {
+      return `/attendance/qr-scan?date=${format(selectedDate, 'yyyy-MM-dd')}`;
+    }
+    return `/attendance/qr-scan?date=${format(new Date(), 'yyyy-MM-dd')}`; // Default to today if no date selected
+  }
+
   return (
     <DashboardLayout>
       <Card className="w-full shadow-lg">
-        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="flex items-center gap-4">
             <CalendarCheck className="h-10 w-10 text-primary" />
             <div>
               <CardTitle className="text-2xl font-bold">Registro de Asistencia Digital</CardTitle>
               <CardDescription>
-                Seleccione una fecha y registre la asistencia de los estudiantes.
+                Seleccione fecha, registre asistencia manual, genere QR o escanee.
               </CardDescription>
             </div>
           </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className="w-full md:w-[280px] justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className="w-full md:w-[280px] justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                  locale={es}
+                  disabled={(date) => date > new Date() || date < new Date("2000-01-01")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Link href={getQrScanLink()} passHref legacyBehavior>
+              <Button className="w-full md:w-auto" variant="outline">
+                <ScanLine className="mr-2 h-5 w-5" />
+                Escanear Códigos QR
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                initialFocus
-                locale={es}
-                disabled={(date) => date > new Date() || date < new Date("2000-01-01")}
-              />
-            </PopoverContent>
-          </Popover>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           {mockStudents.length > 0 ? (
@@ -109,6 +140,7 @@ export default function AttendancePage() {
                       <TableHead>Estudiante</TableHead>
                       <TableHead>Grado y Sección</TableHead>
                       <TableHead className="w-[200px]">Estado</TableHead>
+                      <TableHead className="text-center">Código QR</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -132,6 +164,11 @@ export default function AttendancePage() {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="icon" onClick={() => handleShowQr(student)} title="Mostrar Código QR">
+                            <QrCode className="h-5 w-5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -139,7 +176,7 @@ export default function AttendancePage() {
               </div>
               <div className="mt-6 flex justify-end">
                 <Button onClick={handleSaveAttendance}>
-                  Guardar Asistencia
+                  Guardar Asistencia Manual
                 </Button>
               </div>
             </>
@@ -152,6 +189,15 @@ export default function AttendancePage() {
           )}
         </CardContent>
       </Card>
+
+      {selectedStudentForQr && (
+        <QrCodeDisplay
+          isOpen={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          qrValue={qrValue}
+          studentName={`${selectedStudentForQr.firstName} ${selectedStudentForQr.lastName}`}
+        />
+      )}
     </DashboardLayout>
   );
 }
