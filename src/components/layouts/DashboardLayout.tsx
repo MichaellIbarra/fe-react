@@ -13,7 +13,7 @@ import {
   PanelLeft,
   School,
 } from 'lucide-react';
-import AppLogo from '@/components/AppLogo';
+// Removed AppLogo import as it's not directly used for the sidebar logo here
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +26,8 @@ import {
   SidebarMenuButton,
   SidebarInset,
   useSidebar,
-} from '@/components/ui/sidebar'; // Assuming sidebar components are structured like this
+  SidebarTrigger, // Added SidebarTrigger import
+} from '@/components/ui/sidebar'; 
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -68,12 +69,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen w-full">
         <Sidebar collapsible="icon" className="border-r">
           <SidebarHeader className="p-4 flex items-center justify-between">
+             {/* Updated logo color to use sidebar-foreground for visibility on emerald background */}
              <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                <School className="h-7 w-7 text-primary" />
-                <span className="font-semibold text-xl text-primary">EduAssist</span>
+                <School className="h-7 w-7 text-sidebar-foreground" />
+                <span className="font-semibold text-xl text-sidebar-foreground">EduAssist</span>
              </div>
              <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center hidden w-full py-1.5">
-                <School className="h-7 w-7 text-primary" />
+                <School className="h-7 w-7 text-sidebar-foreground" />
              </div>
           </SidebarHeader>
           <SidebarContent className="p-2">
@@ -100,6 +102,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-col flex-1">
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
             <MobileNavToggle />
+            {/* Added SidebarTrigger for desktop toggle */}
+            <SidebarTrigger className="hidden md:inline-flex" /> 
             <div className="flex-1">
               {/* Optional: Breadcrumbs or Page Title can go here */}
             </div>

@@ -44,14 +44,15 @@ body {
     --radius: 0.5rem;
 
     /* Sidebar specific theme */
-    --sidebar-background: 0 0% 100%; /* White */
-    --sidebar-foreground: 210 20% 30%; /* Darker gray for sidebar text */
-    --sidebar-primary: 207 70% 53%; /* Primary blue for active/selected items */
-    --sidebar-primary-foreground: 210 40% 98%; /* Light text on primary */
-    --sidebar-accent: 200 17% 92%; /* Hover state - slightly darker than main background */
-    --sidebar-accent-foreground: 210 20% 20%; /* Dark text for hover */
-    --sidebar-border: 210 20% 88%; /* Border for sidebar elements */
-    --sidebar-ring: 207 70% 53%; /* Primary blue for focus rings */
+    --sidebar-background: hsl(var(--accent)); /* Emerald Green */
+    --sidebar-foreground: hsl(var(--accent-foreground)); /* Light text on Emerald */
+    
+    /* For hovered/active items on sidebar */
+    --sidebar-accent: hsl(145 63% 55%); /* Lighter Emerald for BG */
+    --sidebar-accent-foreground: hsl(var(--accent-foreground)); /* Light Text (same as main text) */
+    
+    --sidebar-border: hsl(145 63% 40%); /* Darker Emerald for borders */
+    --sidebar-ring: hsl(145 63% 55%); /* Lighter Emerald for rings (matches hover/active BG) */
   }
 
   .dark {
@@ -84,14 +85,15 @@ body {
     --ring: 207 70% 53%; /* Primary blue for rings */
 
     /* Dark Sidebar specific theme */
-    --sidebar-background: 210 20% 10%; /* Darker base for sidebar */
-    --sidebar-foreground: 210 40% 85%;
-    --sidebar-primary: 207 70% 53%; /* Primary blue */
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 20% 20%; /* Hover state */
-    --sidebar-accent-foreground: 210 40% 90%;
-    --sidebar-border: 210 20% 25%;
-    --sidebar-ring: 207 70% 53%;
+    --sidebar-background: hsl(var(--accent)); /* Emerald Green */
+    --sidebar-foreground: hsl(var(--accent-foreground)); /* Light text on Emerald */
+
+    /* For hovered/active items on sidebar */
+    --sidebar-accent: hsl(145 63% 42%); /* Darker Emerald for BG, provides contrast on the base emerald */
+    --sidebar-accent-foreground: hsl(var(--accent-foreground)); /* Light Text (same as main text) */
+
+    --sidebar-border: hsl(145 63% 35%); /* Even Darker Emerald for borders */
+    --sidebar-ring: hsl(145 63% 42%); /* Darker Emerald for rings (matches hover/active BG) */
   }
 }
 
