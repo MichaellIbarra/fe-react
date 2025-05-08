@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+// import { GeistSans } from 'geist/font/sans'; // Removed
 import './globals.css';
 import { Providers } from '@/lib/providers';
 import { Toaster } from '@/components/ui/toaster';
@@ -18,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
+        className={`antialiased`} // Removed GeistSans.variable, font-family is from globals.css
       >
         <Providers>
           {children}

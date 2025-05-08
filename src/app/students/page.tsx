@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // Removed DialogTrigger as it's used via Button
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
@@ -63,7 +63,7 @@ export default function StudentsPage() {
     if (isModalOpen) { 
       if (editingStudent) {
         form.reset(editingStudent);
-      } else if (!viewingStudent) { // Only reset to empty if not viewing
+      } else if (!viewingStudent) { 
         form.reset({
           dni: "",
           firstName: "",
@@ -217,9 +217,15 @@ export default function StudentsPage() {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{viewingStudent ? "Detalles del Estudiante" : editingStudent ? "Editar Estudiante" : "Agregar Estudiante"}</DialogTitle>
-            {!viewingStudent && <DialogDescription>
-              {editingStudent ? "Modifique los datos del estudiante." : "Complete los datos del nuevo estudiante."}
-            </DialogDescription>}
+            {viewingStudent ? (
+              <DialogDescription>
+                Información detallada del estudiante {viewingStudent.firstName} {viewingStudent.lastName}.
+              </DialogDescription>
+            ) : (
+              <DialogDescription>
+                {editingStudent ? "Modifique los datos del estudiante." : "Complete los datos del nuevo estudiante."}
+              </DialogDescription>
+            )}
           </DialogHeader>
           {viewingStudent ? (
             <div className="grid gap-4 py-4">
