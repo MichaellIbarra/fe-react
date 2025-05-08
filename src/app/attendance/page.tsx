@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, Camera, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
@@ -248,7 +248,15 @@ export default function AttendancePage() {
       });
       return;
     }
-    console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), attendanceData);
+    // Here you would typically save the attendanceData to a backend or localStorage
+    // For now, just logging to console
+    const savedRecords: AttendanceRecord[] = Object.entries(attendanceData).map(([studentId, status]) => ({
+      id: `${studentId}-${selectedDate.toISOString()}`, // Simple unique ID for the record
+      studentId,
+      date: selectedDate.toISOString(),
+      status,
+    }));
+    console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), savedRecords);
     toast({
       title: "Asistencia Guardada",
       description: `Se ha guardado la asistencia para el ${format(selectedDate, "PPP", { locale: es })}.`,
@@ -268,6 +276,8 @@ export default function AttendancePage() {
   
   const handleAttendanceRecordedByQr = (studentId: string, studentName: string) => {
     handleStatusChange(studentId, 'Presente');
+    // Optionally, close the scanner modal
+    // setIsQrScannerModalOpen(false); 
   };
 
 
@@ -403,3 +413,4 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
+
