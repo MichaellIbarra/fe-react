@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 "use client";
 
@@ -12,17 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search } from "lucide-react";
+import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Building2, Loader2 } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { LegacyStudent } from "@/types"; // Updated import
+import type { LegacyStudent } from "@/types"; 
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useStudentContext } from "@/contexts/StudentContext";
+import { useCampusContext } from "@/contexts/CampusContext";
+import Link from "next/link";
 
-const gradeOptions = ["Kinder", "1ro", "2do", "3ro", "4to", "5to"];
-const sectionOptions = ["A", "B", "C", "D", "E"];
+const gradeOptions = ["Kinder", "1ro", "2do", "3ro", "4to", "5to", "6to"]; // Added 6to
+const sectionOptions = ["A", "B", "C", "D", "E", "F"]; // Added F
 
 const studentSchema = z.object({
   dni: z.string().min(8, "El DNI debe tener al menos 8 caracteres.").max(15, "El DNI no debe exceder los 15 caracteres."),
@@ -32,16 +33,18 @@ const studentSchema = z.object({
   section: z.string().min(1, "La sección es requerida."),
   level: z.enum(['Inicial', 'Primaria', 'Secundaria'], { required_error: "El nivel es requerido." }),
   shift: z.enum(['Mañana', 'Tarde'], { required_error: "El turno es requerido." }),
-  guardianPhoneNumber: z.string().regex(/^\d{7,15}$/, "Número de celular inválido."),
+  guardianPhoneNumber: z.string().regex(/^\d{7,15}$/, "Número de celular inválido.").optional().or(z.literal('')),
+  // campusId: z.string().min(1, "La sede es requerida."), // Will be auto-filled from selectedCampus
 });
 
 type StudentFormData = z.infer<typeof studentSchema>;
 
 export default function StudentsPage() {
-  const { students, addStudent, updateStudent, deleteStudent } = useStudentContext();
+  const { students, addStudent, updateStudent, deleteStudent, isLoaded: studentsLoaded } = useStudentContext();
+  const { selectedCampus, isLoadingSelection: campusLoading, campuses } = useCampusContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<LegacyStudent | null>(null); // Updated type
-  const [viewingStudent, setViewingStudent] = useState<LegacyStudent | null>(null); // Updated type
+  const [editingStudent, setEditingStudent] = useState<LegacyStudent | null>(null); 
+  const [viewingStudent, setViewingStudent] = useState<LegacyStudent | null>(null); 
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
@@ -80,11 +83,18 @@ export default function StudentsPage() {
 
 
   const onSubmit = (data: StudentFormData) => {
+    if (!selectedCampus) {
+        toast({ variant: "destructive", title: "Error", description: "No hay una sede seleccionada." });
+        return;
+    }
+    // TODO: When students have campusId, ensure it's set:
+    // const studentDataWithCampus = { ...data, campusId: selectedCampus.id };
+
     if (editingStudent) {
-      updateStudent({ ...editingStudent, ...data });
+      updateStudent({ ...editingStudent, ...data }); // Pass `studentDataWithCampus` when ready
       toast({ title: "Estudiante Actualizado", description: "Los datos del estudiante han sido actualizados." });
     } else {
-      addStudent(data as Omit<LegacyStudent, 'id'>); // Ensure data matches Omit<LegacyStudent, 'id'>
+      addStudent(data as Omit<LegacyStudent, 'id'>); // Pass `studentDataWithCampus` when ready
       toast({ title: "Estudiante Agregado", description: "El nuevo estudiante ha sido agregado." });
     }
     setIsModalOpen(false);
@@ -96,7 +106,7 @@ export default function StudentsPage() {
     toast({ title: "Estudiante Eliminado", description: "El estudiante ha sido eliminado.", variant: "destructive" });
   };
 
-  const openEditModal = (student: LegacyStudent) => { // Updated type
+  const openEditModal = (student: LegacyStudent) => { 
     setEditingStudent(student);
     setViewingStudent(null);
     setIsModalOpen(true);
@@ -108,16 +118,46 @@ export default function StudentsPage() {
     setIsModalOpen(true);
   };
   
-  const openViewModal = (student: LegacyStudent) => { // Updated type
+  const openViewModal = (student: LegacyStudent) => { 
     setViewingStudent(student);
     setEditingStudent(null);
     setIsModalOpen(true);
   };
 
+  // TODO: Filter students by selectedCampus.id once student data includes campusId
   const filteredStudents = students.filter(student =>
-    `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.dni.includes(searchTerm)
+    // (student.campusId === selectedCampus?.id) && // Uncomment when campusId is available
+    (`${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.dni.includes(searchTerm))
   );
+
+  if (campusLoading || !studentsLoaded) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ml-2">Cargando datos de estudiantes...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!selectedCampus) {
+    return (
+      <DashboardLayout>
+        <Card className="text-center">
+          <CardHeader>
+            <Building2 className="mx-auto h-12 w-12 text-primary mb-4" />
+            <CardTitle>No hay Sede Seleccionada</CardTitle>
+            <CardDescription>
+              Por favor, seleccione una sede desde el <Link href="/dashboard" className="text-primary hover:underline">Dashboard</Link> para gestionar estudiantes.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
 
   return (
     <DashboardLayout>
@@ -128,7 +168,7 @@ export default function StudentsPage() {
             <div>
               <CardTitle className="text-2xl font-bold">Gestión de Estudiantes</CardTitle>
               <CardDescription>
-                Administre la información de los estudiantes.
+                Administre la información de los estudiantes de la sede: {selectedCampus.name}.
               </CardDescription>
             </div>
           </div>
@@ -196,9 +236,10 @@ export default function StudentsPage() {
           ) : (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
               <Users className="h-16 w-16 text-muted-foreground" />
-              <p className="text-muted-foreground text-lg mt-4">No se encontraron estudiantes.</p>
+              <p className="text-muted-foreground text-lg mt-4">
+                {searchTerm ? "No se encontraron estudiantes con ese criterio." : "No hay estudiantes registrados en esta sede."}
+              </p>
               <p className="text-sm text-muted-foreground mt-2">
-                {searchTerm ? "Intente con otros términos de búsqueda o " : ""}
                 Agregue un nuevo estudiante para comenzar.
               </p>
             </div>
@@ -223,7 +264,7 @@ export default function StudentsPage() {
               </DialogDescription>
             ) : (
               <DialogDescription>
-                {editingStudent ? "Modifique los datos del estudiante." : "Complete los datos del nuevo estudiante."}
+                {editingStudent ? "Modifique los datos del estudiante." : `Complete los datos del nuevo estudiante para la sede ${selectedCampus?.name}.`}
               </DialogDescription>
             )}
           </DialogHeader>
@@ -237,7 +278,7 @@ export default function StudentsPage() {
                 <div><Label>Sección:</Label><p className="text-sm">{viewingStudent.section}</p></div>
                 <div><Label>Nivel:</Label><p className="text-sm">{viewingStudent.level}</p></div>
                 <div><Label>Turno:</Label><p className="text-sm">{viewingStudent.shift}</p></div>
-                <div><Label>Celular Apoderado:</Label><p className="text-sm">{viewingStudent.guardianPhoneNumber}</p></div>
+                <div><Label>Celular Apoderado:</Label><p className="text-sm">{viewingStudent.guardianPhoneNumber || "No registrado"}</p></div>
               </div>
                <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cerrar</Button>
@@ -341,7 +382,7 @@ export default function StudentsPage() {
                   {form.formState.errors.shift && <p className="text-destructive text-sm mt-1">{form.formState.errors.shift.message}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="guardianPhoneNumber">Celular del Apoderado</Label>
+                  <Label htmlFor="guardianPhoneNumber">Celular del Apoderado (Opcional)</Label>
                   <Input id="guardianPhoneNumber" {...form.register("guardianPhoneNumber")} className={cn(form.formState.errors.guardianPhoneNumber && "border-destructive")} />
                   {form.formState.errors.guardianPhoneNumber && <p className="text-destructive text-sm mt-1">{form.formState.errors.guardianPhoneNumber.message}</p>}
                 </div>

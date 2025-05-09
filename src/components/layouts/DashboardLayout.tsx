@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 "use client";
 
@@ -18,7 +17,10 @@ import {
   School,
   Loader2,
   MessageSquare,
-  Building2, // Added for Campuses
+  Building2, 
+  Settings, // Added for Settings
+  UserCircle, // Added for Profile
+  Home, // Added for general Dashboard link
 } from 'lucide-react';
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCampusContext } from '@/contexts/CampusContext';
 import type { LegacyUserRole } from '@/types';
 
 interface NavItem {
@@ -42,23 +45,30 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   roles?: LegacyUserRole[];
+  requiresCampus?: boolean; // New property
 }
 
-const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/attendance', label: 'Asistencia', icon: CalendarCheck },
-  { href: '/grades', label: 'Notas', icon: GraduationCap },
-  { href: '/reports', label: 'Informes', icon: FileText },
-  { href: '/students', label: 'Estudiantes', icon: Users },
-  { href: '/notifications', label: 'Notificaciones', icon: MessageSquare },
-  { href: '/campuses', label: 'Sedes', icon: Building2, roles: ['superuser'] }, // Added Campuses Link
-  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'] },
+const baseNavItems: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresCampus: false }, // Dashboard itself doesn't strictly require a campus to be selected initially
+  { href: '/attendance', label: 'Asistencia', icon: CalendarCheck, requiresCampus: true },
+  { href: '/grades', label: 'Notas', icon: GraduationCap, requiresCampus: true },
+  { href: '/reports', label: 'Informes', icon: FileText, requiresCampus: true },
+  { href: '/students', label: 'Estudiantes', icon: Users, requiresCampus: true },
+  { href: '/notifications', label: 'Notificaciones', icon: MessageSquare, requiresCampus: true },
+  { href: '/campuses', label: 'Sedes', icon: Building2, roles: ['superuser'], requiresCampus: false },
+  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'], requiresCampus: false }, // Assuming this is global for superadmin
 ];
+
+const profileAndSettingsNavItems: NavItem[] = [
+    { href: '/profile', label: 'Perfil', icon: UserCircle, requiresCampus: false },
+    { href: '/settings', label: 'Configuración', icon: Settings, requiresCampus: false },
+];
+
 
 function MobileNavToggle() {
   const { setOpenMobile, isMobile } = useSidebar();
-
   const [hasMounted, setHasMounted] = React.useState(false);
+
   React.useEffect(() => {
     setHasMounted(true);
   }, []);
@@ -92,6 +102,7 @@ function MobileNavToggle() {
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { currentUser, isAuthLoading } = useAuth();
+  const { selectedCampus, isLoadingSelection: campusSelectionLoading } = useCampusContext();
   const router = useRouter();
 
   useEffect(() => {
@@ -100,20 +111,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [currentUser, isAuthLoading, router]);
 
-  const accessibleNavItems = navItems.filter(item => {
-    if (!item.roles || item.roles.length === 0) {
-      return true;
-    }
-    return currentUser && item.roles.includes(currentUser.role);
-  });
+  const allNavItems = [...baseNavItems, ...profileAndSettingsNavItems];
 
-  if (isAuthLoading || (!isAuthLoading && !currentUser)) {
+  const accessibleNavItems = allNavItems.filter(item => {
+    const roleMatch = !item.roles || item.roles.length === 0 || (currentUser && item.roles.includes(currentUser.role));
+    const campusRequirementMet = !item.requiresCampus || (item.requiresCampus && selectedCampus != null);
+    return roleMatch && campusRequirementMet;
+  });
+  
+  const isItemDisabled = (item: NavItem): boolean => {
+    if (item.requiresCampus && !selectedCampus) return true;
+    return false;
+  }
+
+
+  if (isAuthLoading || (!isAuthLoading && !currentUser) || campusSelectionLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
+         <p className="ml-3 text-muted-foreground">Cargando entorno...</p>
       </div>
     );
   }
+  
+  const sidebarTitle = selectedCampus ? selectedCampus.name : "EduAssist";
+  const sidebarIcon = selectedCampus ? Building2 : School;
+
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -124,32 +147,59 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           side="left"
         >
           <SidebarHeader className="p-4 flex items-center justify-between">
-             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                <School className="h-7 w-7 text-sidebar-foreground" />
-                <span className="font-semibold text-xl text-sidebar-foreground">EduAssist</span>
-             </div>
-             <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center hidden w-full py-1.5">
-                <School className="h-7 w-7 text-sidebar-foreground" />
-             </div>
+             <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden" aria-label={sidebarTitle}>
+                <sidebarIcon className="h-7 w-7 text-sidebar-foreground" />
+                <span className="font-semibold text-xl text-sidebar-foreground truncate max-w-[150px]">{sidebarTitle}</span>
+             </Link>
+             <Link href="/dashboard" className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center hidden w-full py-1.5" aria-label={sidebarTitle}>
+                <sidebarIcon className="h-7 w-7 text-sidebar-foreground" />
+             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
             <SidebarMenu>
-              {accessibleNavItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} passHref legacyBehavior>
-                    <SidebarMenuButton
-                      isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
-                      tooltip={{ children: item.label, className: "whitespace-nowrap" }}
-                      className="justify-start"
-                      aria-current={pathname === item.href ? "page" : undefined}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              ))}
+              {baseNavItems.map((item) => {
+                const roleMatch = !item.roles || item.roles.length === 0 || (currentUser && item.roles.includes(currentUser.role));
+                if (!roleMatch) return null;
+
+                const disabled = isItemDisabled(item);
+                                
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <Link href={disabled ? "#" : item.href} passHref legacyBehavior>
+                      <SidebarMenuButton
+                        isActive={!disabled && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)))}
+                        tooltip={{ children: item.label, className: "whitespace-nowrap" }}
+                        className={`justify-start ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        aria-current={!disabled && pathname === item.href ? "page" : undefined}
+                        disabled={disabled}
+                        aria-disabled={disabled}
+                        onClick={(e) => disabled && e.preventDefault()}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
+            <div className="mt-auto p-2 space-y-1">
+                 {profileAndSettingsNavItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                         <Link href={item.href} passHref legacyBehavior>
+                            <SidebarMenuButton
+                                isActive={pathname === item.href || pathname.startsWith(item.href)}
+                                tooltip={{ children: item.label, className: "whitespace-nowrap" }}
+                                className="justify-start"
+                                aria-current={pathname === item.href ? "page" : undefined}
+                            >
+                                <item.icon className="h-5 w-5" />
+                                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                            </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                ))}
+            </div>
           </SidebarContent>
         </Sidebar>
 
@@ -158,6 +208,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <MobileNavToggle />
             <SidebarTrigger className="hidden md:inline-flex" />
             <div className="flex-1">
+              {selectedCampus && (
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-foreground">{selectedCampus.name}</span>
+                </div>
+              )}
             </div>
             <UserNav />
           </header>

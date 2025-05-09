@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 "use client";
 
@@ -35,7 +34,7 @@ type CampusFormData = z.infer<typeof campusSchema>;
 
 export default function CampusesPage() {
   const { campuses, addCampus, updateCampus, deleteCampus, isLoaded: campusesLoaded } = useCampusContext();
-  const { currentUser } = useAuth();
+  const { currentUser, isAuthLoading } = useAuth();
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampus, setEditingCampus] = useState<LegacyCampus | null>(null);
@@ -56,7 +55,7 @@ export default function CampusesPage() {
   });
 
    useEffect(() => {
-    if (currentUser && currentUser.role !== 'superuser') {
+    if (!isAuthLoading && currentUser && currentUser.role !== 'superuser') {
       toast({
         variant: "destructive",
         title: "Acceso Denegado",
@@ -64,7 +63,7 @@ export default function CampusesPage() {
       });
       router.push('/dashboard');
     }
-  }, [currentUser, router, toast]);
+  }, [currentUser, isAuthLoading, router, toast]);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -130,7 +129,19 @@ export default function CampusesPage() {
     campus.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  if (!currentUser || currentUser.role !== 'superuser') {
+  if (isAuthLoading || !currentUser || !campusesLoaded) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+           <p className="ml-4 text-lg text-muted-foreground">Cargando datos de sedes...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+  
+  if (currentUser.role !== 'superuser') {
+    // This should ideally be caught by useEffect redirect, but as a fallback:
     return (
       <DashboardLayout>
         <Card>
@@ -145,16 +156,6 @@ export default function CampusesPage() {
     );
   }
 
-  if (!campusesLoaded) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <p className="ml-4 text-lg text-muted-foreground">Cargando datos de sedes...</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>

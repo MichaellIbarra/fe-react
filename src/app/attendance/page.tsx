@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 "use client";
 
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, Camera, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, Camera, CheckCircle, XCircle, Loader2, AlertTriangle, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { LegacyStudent, LegacyAttendanceRecord } from "@/types";
@@ -20,19 +19,23 @@ import { useToast } from "@/hooks/use-toast";
 import QrCodeDisplay from "@/components/QrCodeDisplay";
 import QrScanner from "@/components/QrScanner";
 import { useStudentContext } from "@/contexts/StudentContext";
+import { useCampusContext } from "@/contexts/CampusContext";
+import Link from "next/link";
 
 type AttendanceStatus = LegacyAttendanceRecord["status"];
 
-const getAttendanceStorageKey = (date: Date) => `eduassist_attendance_${format(date, "yyyy-MM-dd")}`;
+const getAttendanceStorageKey = (date: Date, campusId?: string) => 
+  `eduassist_attendance_${campusId ? campusId + '_' : ''}${format(date, "yyyy-MM-dd")}`;
 
 interface QrScannerModalContentProps {
   selectedDate: Date;
   onAttendanceRecorded: (studentId: string, studentName: string) => void;
   onClose: () => void;
   getStudentById: (studentId: string) => LegacyStudent | undefined;
+  isQrScannerModalOpen: boolean; // Added to control permission request
 }
 
-const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedDate, onAttendanceRecorded, onClose, getStudentById }) => {
+const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedDate, onAttendanceRecorded, onClose, getStudentById, isQrScannerModalOpen }) => {
   const { toast } = useToast();
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,13 +43,14 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const html5QrCodeRef = useRef(null); // Ref for Html5Qrcode instance
 
   const resetScanner = async () => {
     setScanResult(null);
     setError(null);
     setLastScannedData(null);
     setIsScanning(false); 
-    setHasCameraPermission(null); // Trigger permission request again
+    setHasCameraPermission(null); 
   };
 
   useEffect(() => {
@@ -58,9 +62,6 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
           streamInstance = stream;
           setHasCameraPermission(true);
           setIsScanning(true);
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
         } catch (err) {
           setHasCameraPermission(false);
           setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
@@ -77,7 +78,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
       }
     };
 
-    if (isQrScannerModalOpen && hasCameraPermission === null) { // Only request if modal is open and permission not determined
+    if (isQrScannerModalOpen && hasCameraPermission === null) { 
         requestCameraPermission();
     }
     
@@ -85,12 +86,11 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
       if (streamInstance) {
         streamInstance.getTracks().forEach(track => track.stop());
       }
-      if (videoRef.current && videoRef.current.srcObject) {
-        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
+       if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(console.error);
       }
     };
-  }, [toast, hasCameraPermission, isQrScannerModalOpen]); // Add isQrScannerModalOpen dependency
+  }, [toast, hasCameraPermission, isQrScannerModalOpen]);
 
 
   const handleScanSuccess = (decodedText: string) => {
@@ -131,10 +131,11 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
   };
 
   const handleScanFailure = (errorMessage: string) => {
+    // This can be noisy if QR code is not in view constantly.
     // console.warn(`QR Scan Failure: ${errorMessage}`);
   };
   
-  if (hasCameraPermission === null && isQrScannerModalOpen) { // Show loader only if modal is open and checking permission
+  if (hasCameraPermission === null && isQrScannerModalOpen) { 
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -153,9 +154,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
         </AlertDescription>
       </Alert>
 
-      <video ref={videoRef} className={`w-full aspect-video rounded-md ${!isScanning || !hasCameraPermission ? 'hidden' : ''}`} autoPlay muted playsInline />
-
-      {!hasCameraPermission && ( 
+      {!hasCameraPermission && isQrScannerModalOpen && ( 
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error de Cámara</AlertTitle>
@@ -173,6 +172,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
             onScanFailure={handleScanFailure}
             qrboxSize={200} 
             fps={5}
+            html5QrCodeRef={html5QrCodeRef} // Pass the ref
           />
         </div>
       )}
@@ -217,6 +217,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
 
 export default function AttendancePage() {
   const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
+  const { selectedCampus, isLoadingSelection: campusLoading, campuses } = useCampusContext();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
   const { toast } = useToast();
@@ -230,42 +231,43 @@ export default function AttendancePage() {
 
   // Load and initialize attendance data
   useEffect(() => {
-    if (typeof window !== 'undefined' && selectedDate && studentsLoaded) {
+    if (typeof window !== 'undefined' && selectedDate && studentsLoaded && selectedCampus && !campusLoading) {
       setIsLoadingAttendance(true);
-      const storageKey = getAttendanceStorageKey(selectedDate);
+      const storageKey = getAttendanceStorageKey(selectedDate, selectedCampus.id);
       const storedAttendance = localStorage.getItem(storageKey);
       
+      // TODO: Filter students by selectedCampus.id once student data includes campusId
+      const campusStudents = students; // Placeholder
+
       if (storedAttendance) {
         try {
           setAttendanceData(JSON.parse(storedAttendance));
         } catch (error) {
           console.error("Error parsing attendance from localStorage:", error);
-          // Initialize if parsing fails
           const initialData: Record<string, AttendanceStatus> = {};
-          students.forEach(student => {
-            initialData[student.id] = 'Presente';
-          });
+          campusStudents.forEach(student => { initialData[student.id] = 'Presente'; });
           setAttendanceData(initialData);
         }
       } else {
-        // Initialize if not found in storage
         const initialData: Record<string, AttendanceStatus> = {};
-        students.forEach(student => {
-          initialData[student.id] = 'Presente';
-        });
+        campusStudents.forEach(student => { initialData[student.id] = 'Presente'; });
         setAttendanceData(initialData);
       }
       setIsLoadingAttendance(false);
+    } else if (!selectedCampus && !campusLoading) {
+      // No campus selected, clear attendance data
+      setAttendanceData({});
+      setIsLoadingAttendance(false);
     }
-  }, [selectedDate, students, studentsLoaded]);
+  }, [selectedDate, students, studentsLoaded, selectedCampus, campusLoading]);
 
   // Save attendance data to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined' && selectedDate && !isLoadingAttendance && Object.keys(attendanceData).length > 0) {
-      const storageKey = getAttendanceStorageKey(selectedDate);
+    if (typeof window !== 'undefined' && selectedDate && !isLoadingAttendance && Object.keys(attendanceData).length > 0 && selectedCampus) {
+      const storageKey = getAttendanceStorageKey(selectedDate, selectedCampus.id);
       localStorage.setItem(storageKey, JSON.stringify(attendanceData));
     }
-  }, [attendanceData, selectedDate, isLoadingAttendance]);
+  }, [attendanceData, selectedDate, isLoadingAttendance, selectedCampus]);
 
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
@@ -276,19 +278,18 @@ export default function AttendancePage() {
   };
 
   const handleSaveAttendance = () => {
-    if (!selectedDate) {
+    if (!selectedDate || !selectedCampus) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Por favor, seleccione una fecha.",
+        description: "Por favor, seleccione una fecha y asegúrese de que una sede esté activa.",
       });
       return;
     }
-    // Data is already saved by the useEffect hook, this is more for user feedback
-    console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), attendanceData);
+    console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), "at campus", selectedCampus.name, attendanceData);
     toast({
       title: "Asistencia Guardada",
-      description: `Se ha guardado la asistencia para el ${format(selectedDate, "PPP", { locale: es })}.`,
+      description: `Se ha guardado la asistencia para el ${format(selectedDate, "PPP", { locale: es })} en la sede ${selectedCampus.name}.`,
     });
   };
 
@@ -307,13 +308,32 @@ export default function AttendancePage() {
     handleStatusChange(studentId, 'Presente');
   };
   
-  if (!studentsLoaded || isLoadingAttendance) {
+  // TODO: Filter students by selectedCampus.id once student data includes campusId
+  const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
+
+  if (!studentsLoaded || isLoadingAttendance || campusLoading) {
      return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <CalendarCheck className="h-16 w-16 animate-spin text-primary" />
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
            <p className="ml-4 text-lg text-muted-foreground">Cargando datos de asistencia...</p>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!selectedCampus) {
+    return (
+      <DashboardLayout>
+        <Card className="text-center">
+          <CardHeader>
+            <Building2 className="mx-auto h-12 w-12 text-primary mb-4" />
+            <CardTitle>No hay Sede Seleccionada</CardTitle>
+            <CardDescription>
+              Por favor, seleccione una sede desde el <Link href="/dashboard" className="text-primary hover:underline">Dashboard</Link> para gestionar la asistencia.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </DashboardLayout>
     );
   }
@@ -327,7 +347,7 @@ export default function AttendancePage() {
             <div>
               <CardTitle className="text-2xl font-bold">Registro de Asistencia Digital</CardTitle>
               <CardDescription>
-                Seleccione fecha, registre asistencia manual, genere QR o escanee.
+                Sede: {selectedCampus.name}. Registre asistencia manual, genere QR o escanee.
               </CardDescription>
             </div>
           </div>
@@ -373,6 +393,7 @@ export default function AttendancePage() {
                     onAttendanceRecorded={handleAttendanceRecordedByQr}
                     onClose={() => setIsQrScannerModalOpen(false)}
                     getStudentById={getStudentById}
+                    isQrScannerModalOpen={isQrScannerModalOpen}
                   />
                 )}
               </DialogContent>
@@ -380,7 +401,7 @@ export default function AttendancePage() {
           </div>
         </CardHeader>
         <CardContent>
-          {students.length > 0 ? (
+          {studentsForSelectedCampus.length > 0 ? (
             <>
               <div className="overflow-x-auto">
                 <Table>
@@ -393,10 +414,10 @@ export default function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((student) => (
+                    {studentsForSelectedCampus.map((student) => (
                       <TableRow key={student.id}>
                         <TableCell>{student.firstName} {student.lastName}</TableCell>
-                        <TableCell>{student.grade} "{student.section}"</TableCell>
+                        <TableCell>{student.grade} &quot;{student.section}&quot;</TableCell>
                         <TableCell>
                           <Select
                             value={attendanceData[student.id] || 'Presente'}
@@ -432,8 +453,8 @@ export default function AttendancePage() {
           ) : (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
               <Users className="h-16 w-16 text-muted-foreground" />
-              <p className="text-muted-foreground text-lg mt-4">No hay estudiantes para mostrar.</p>
-              <p className="text-sm text-muted-foreground mt-2">Agregue estudiantes en la sección de Gestión de Estudiantes.</p>
+              <p className="text-muted-foreground text-lg mt-4">No hay estudiantes para mostrar en esta sede.</p>
+              <p className="text-sm text-muted-foreground mt-2">Agregue estudiantes en la sección de Gestión de Estudiantes para esta sede.</p>
             </div>
           )}
         </CardContent>
@@ -450,4 +471,3 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
-

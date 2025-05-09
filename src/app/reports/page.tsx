@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 "use client";
 
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, CalendarCheck, Download, Loader2 } from "lucide-react";
+import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, CalendarCheck, Download, Loader2, Building2 } from "lucide-react";
 import type { LegacyStudent, LegacyProgressReport, LegacyGrade, LegacyAttendanceRecord } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -18,36 +17,36 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable'; 
 import * as XLSX from 'xlsx';
 import { useStudentContext } from "@/contexts/StudentContext";
+import { useCampusContext } from "@/contexts/CampusContext";
+import Link from "next/link";
 
-const GRADES_STORAGE_KEY = "eduassist_grades";
-const getAttendanceStorageKey = (date: Date) => `eduassist_attendance_${format(date, "yyyy-MM-dd")}`; // Helper to get attendance key
+const getGradesStorageKey = (campusId?: string) => 
+  `eduassist_grades_${campusId ? campusId + '_' : ''}`;
+const getAttendanceStorageKey = (date: Date, campusId?: string) => 
+  `eduassist_attendance_${campusId ? campusId + '_' : ''}${format(date, "yyyy-MM-dd")}`;
 
 const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimestre 4"];
 
-function generateReport(student: LegacyStudent | undefined, period: string, allGrades: LegacyGrade[], allAttendanceRecords: Record<string, Record<string, LegacyAttendanceRecord["status"]>>): LegacyProgressReport | null {
+function generateReport(student: LegacyStudent | undefined, period: string, allGrades: LegacyGrade[], campusId: string): LegacyProgressReport | null {
   if (!student) return null;
 
+  // Filter grades for the specific student, period, and campus (if campusId is part of LegacyGrade)
+  // For now, allGrades are already filtered by campusId before calling this function.
   const studentGrades = allGrades.filter(g => g.studentId === student.id && g.period === period);
   
-  // For attendance, we need to iterate through a range of dates for the given period (simplified here)
-  // This is a simplified mock; a real system would define period start/end dates.
-  // For this mock, we'll just use a few recent days as a proxy.
   let presentDays = 0;
   let absentDays = 0;
   let lateDays = 0;
   let totalConsideredDays = 0;
 
-  // Mocking attendance check for last 60 days if this period is current, otherwise it's more complex
   const today = new Date();
-  for (let i = 0; i < 60; i++) { // Check last 60 days as a proxy for "current period" attendance
+  for (let i = 0; i < 60; i++) { 
       const dateToCheck = new Date(today);
       dateToCheck.setDate(today.getDate() - i);
-      const dateKey = format(dateToCheck, "yyyy-MM-dd");
-      const attendanceForDateKey = `eduassist_attendance_${dateKey}`;
+      const attendanceForDateKey = getAttendanceStorageKey(dateToCheck, campusId);
       
-      // Attempt to get from direct localStorage or from the passed allAttendanceRecords
-      let dailyAttendance = allAttendanceRecords[attendanceForDateKey];
-      if (!dailyAttendance && typeof window !== 'undefined') {
+      let dailyAttendance = null;
+      if (typeof window !== 'undefined') {
           const storedData = localStorage.getItem(attendanceForDateKey);
           if (storedData) {
               try {
@@ -65,7 +64,6 @@ function generateReport(student: LegacyStudent | undefined, period: string, allG
       }
   }
 
-
   return {
     id: `report-${student.id}-${period.replace(" ", "-")}`,
     studentId: student.id,
@@ -73,7 +71,7 @@ function generateReport(student: LegacyStudent | undefined, period: string, allG
     summary: `Informe de progreso para ${student.firstName} ${student.lastName} durante el ${period}. En general, ${student.firstName} ha demostrado un progreso ${studentGrades.length > 1 && (studentGrades[0].gradeValue === "AD" || Number(studentGrades[0].gradeValue) > 15) ? "sobresaliente" : "adecuado"} en sus asignaturas. Se recomienda seguir fomentando la participación activa en clase.`,
     gradesBySubject: studentGrades.map(g => ({ subject: g.subjectArea, grade: g.gradeValue, comments: "Buen desempeño." })),
     behavioralObservations: "Muestra una actitud positiva y colaboradora en el aula. A veces se distrae durante las explicaciones, pero responde bien a los recordatorios.",
-    futRequests: [ // FUT requests remain static mock for now
+    futRequests: [ 
       { date: new Date(Date.now() - 86400000 * 5).toISOString(), reason: "Solicitud de constancia de estudios.", status: "Atendido" },
     ],
     attendanceSummary: {
@@ -250,49 +248,47 @@ function createXls(report: LegacyProgressReport, student: LegacyStudent): ArrayB
 
 export default function ReportsPage() {
   const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
+  const { selectedCampus, isLoadingSelection: campusLoading } = useCampusContext();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>(mockPeriods[0]);
   const [reportData, setReportData] = useState<LegacyProgressReport | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
   const [allGrades, setAllGrades] = useState<LegacyGrade[]>([]);
-  const [allAttendance, setAllAttendance] = useState<Record<string, Record<string, LegacyAttendanceRecord["status"]>>>({});
+  // Attendance is fetched per-student, per-period inside generateReport for simplicity
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && selectedCampus && !campusLoading) {
       setIsLoadingData(true);
-      const storedGrades = localStorage.getItem(GRADES_STORAGE_KEY);
+      const gradesKey = getGradesStorageKey(selectedCampus.id);
+      const storedGrades = localStorage.getItem(gradesKey);
       if (storedGrades) {
         try {
           setAllGrades(JSON.parse(storedGrades));
-        } catch (e) { console.error("Failed to parse grades for reports", e); }
+        } catch (e) { console.error("Failed to parse grades for reports", e); setAllGrades([]); }
+      } else {
+        setAllGrades([]);
       }
-
-      // For attendance, we'd ideally fetch relevant records, but for mock using localStorage:
-      // This part is tricky as attendance is stored per day.
-      // For simplicity, `generateReport` will try to access daily localStorage items.
-      // Or, we could try to aggregate some recent ones here if performance allows.
-      // For now, `generateReport` will handle individual day lookups.
-      // A more robust solution would involve a backend or a more complex local storage aggregation.
-      
       setIsLoadingData(false);
+    } else if (!selectedCampus && !campusLoading) {
+        setAllGrades([]);
+        setIsLoadingData(false);
     }
-  }, []);
+  }, [selectedCampus, campusLoading]);
 
 
   const handleGenerateReport = () => {
-    if (!selectedStudentId || !selectedPeriod) {
+    if (!selectedStudentId || !selectedPeriod || !selectedCampus) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Por favor, seleccione un estudiante y un periodo.",
+        description: "Por favor, seleccione una sede, un estudiante y un periodo.",
       });
       return;
     }
     const student = getStudentById(selectedStudentId);
-    // Pass all loaded grades and a reference to how attendance is stored (or the structure itself)
-    const generatedReport = generateReport(student, selectedPeriod, allGrades, {}); // Passing empty attendance initially, generateReport will handle lookup
+    const generatedReport = generateReport(student, selectedPeriod, allGrades, selectedCampus.id);
     setReportData(generatedReport);
     if (generatedReport) {
       toast({
@@ -355,15 +351,33 @@ export default function ReportsPage() {
     }
   };
 
+  // TODO: Filter students by selectedCampus.id once student data includes campusId
+  const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
   const currentStudentDetails = selectedStudentId ? getStudentById(selectedStudentId) : null;
 
-  if (!studentsLoaded || isLoadingData) {
+  if (!studentsLoaded || isLoadingData || campusLoading) {
     return (
      <DashboardLayout>
-       <div className="flex items-center justify-center h-64">
-         <FileText className="h-16 w-16 animate-spin text-primary" />
+       <div className="flex items-center justify-center h-full">
+         <Loader2 className="h-16 w-16 animate-spin text-primary" />
           <p className="ml-4 text-lg text-muted-foreground">Cargando datos para informes...</p>
        </div>
+     </DashboardLayout>
+   );
+ }
+
+ if (!selectedCampus) {
+    return (
+     <DashboardLayout>
+       <Card className="text-center">
+         <CardHeader>
+           <Building2 className="mx-auto h-12 w-12 text-primary mb-4" />
+           <CardTitle>No hay Sede Seleccionada</CardTitle>
+           <CardDescription>
+             Por favor, seleccione una sede desde el <Link href="/dashboard" className="text-primary hover:underline">Dashboard</Link> para generar informes.
+           </CardDescription>
+         </CardHeader>
+       </Card>
      </DashboardLayout>
    );
  }
@@ -371,31 +385,36 @@ export default function ReportsPage() {
   return (
     <DashboardLayout>
       <Card className="w-full shadow-lg">
-        <CardHeader className="flex flex-row items-center gap-4">
-          <FileText className="h-10 w-10 text-primary" />
-          <div>
-            <CardTitle className="text-2xl font-bold">Informes de Progreso</CardTitle>
-            <CardDescription>
-              Genere y consulte los informes de progreso de los estudiantes.
-            </CardDescription>
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <FileText className="h-10 w-10 text-primary" />
+            <div>
+              <CardTitle className="text-2xl font-bold">Informes de Progreso</CardTitle>
+              <CardDescription>
+                Sede: {selectedCampus.name}. Genere y consulte los informes de progreso.
+              </CardDescription>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4 mb-6">
             <div>
               <label htmlFor="student-select" className="block text-sm font-medium text-foreground mb-1">Estudiante</label>
-              <Select value={selectedStudentId || ""} onValueChange={setSelectedStudentId}>
+              <Select value={selectedStudentId || ""} onValueChange={setSelectedStudentId} disabled={studentsForSelectedCampus.length === 0}>
                 <SelectTrigger id="student-select">
                   <SelectValue placeholder="Seleccione estudiante" />
                 </SelectTrigger>
                 <SelectContent>
-                  {students.map(student => (
+                  {studentsForSelectedCampus.map(student => (
                     <SelectItem key={student.id} value={student.id}>
                       {student.firstName} {student.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {studentsForSelectedCampus.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">No hay estudiantes en esta sede.</p>
+            )}
             </div>
             <div>
               <label htmlFor="period-select" className="block text-sm font-medium text-foreground mb-1">Periodo</label>
@@ -543,4 +562,3 @@ export default function ReportsPage() {
     </DashboardLayout>
   );
 }
-

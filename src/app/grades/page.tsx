@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 "use client";
 
@@ -11,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users } from "lucide-react";
+import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users, Loader2, Building2 } from "lucide-react";
 import type { LegacyStudent, LegacyGrade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
@@ -21,23 +20,28 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useStudentContext } from "@/contexts/StudentContext";
+import { useCampusContext } from "@/contexts/CampusContext";
+import Link from "next/link";
 
-const mockSubjects: string[] = ["Matemáticas", "Comunicación", "Ciencias", "Personal Social", "Arte"];
+const mockSubjects: string[] = ["Matemáticas", "Comunicación", "Ciencias", "Personal Social", "Arte", "Inglés", "Educación Física"];
 const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimestre 4"];
 
 const gradeSchema = z.object({
   studentId: z.string().min(1, "Debe seleccionar un estudiante."),
   subjectArea: z.string().min(1, "Debe seleccionar una materia."),
-  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."),
+  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."), // Keep as string for flexibility (A, B, C, 1-20)
   period: z.string().min(1, "Debe seleccionar un periodo."),
 });
 
 type GradeFormData = z.infer<typeof gradeSchema>;
 
-const GRADES_STORAGE_KEY = "eduassist_grades";
+const getGradesStorageKey = (campusId?: string) => 
+  `eduassist_grades_${campusId ? campusId + '_' : ''}`;
+
 
 export default function GradesPage() {
   const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
+  const { selectedCampus, isLoadingSelection: campusLoading } = useCampusContext();
   const [grades, setGrades] = useState<LegacyGrade[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,28 +59,36 @@ export default function GradesPage() {
     },
   });
 
-  // Load grades from localStorage on component mount
+  // Load grades from localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedGrades = localStorage.getItem(GRADES_STORAGE_KEY);
+    if (typeof window !== 'undefined' && selectedCampus && !campusLoading) {
+      setIsLoadingGrades(true);
+      const storageKey = getGradesStorageKey(selectedCampus.id);
+      const storedGrades = localStorage.getItem(storageKey);
       if (storedGrades) {
         try {
           setGrades(JSON.parse(storedGrades));
         } catch (error) {
           console.error("Error parsing grades from localStorage:", error);
-          setGrades([]); // Fallback to empty array if parsing fails
+          setGrades([]);
         }
+      } else {
+        setGrades([]); // Initialize if not found
       }
       setIsLoadingGrades(false);
+    } else if (!selectedCampus && !campusLoading) {
+        setGrades([]); // Clear grades if no campus selected
+        setIsLoadingGrades(false);
     }
-  }, []);
+  }, [selectedCampus, campusLoading]);
 
-  // Save grades to localStorage whenever they change
+  // Save grades to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined' && !isLoadingGrades) {
-      localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(grades));
+    if (typeof window !== 'undefined' && !isLoadingGrades && selectedCampus) {
+      const storageKey = getGradesStorageKey(selectedCampus.id);
+      localStorage.setItem(storageKey, JSON.stringify(grades));
     }
-  }, [grades, isLoadingGrades]);
+  }, [grades, isLoadingGrades, selectedCampus]);
 
 
  useEffect(() => {
@@ -101,8 +113,13 @@ export default function GradesPage() {
 
 
   const onSubmit = (data: GradeFormData) => {
+     if (!selectedCampus) {
+        toast({ variant: "destructive", title: "Error", description: "No hay una sede seleccionada." });
+        return;
+    }
     const newGrade: LegacyGrade = {
       ...data,
+      // campusId: selectedCampus.id, // TODO: Add campusId to LegacyGrade type
       id: editingGrade ? editingGrade.id : String(Date.now()),
       dateAssigned: new Date().toISOString(),
     };
@@ -133,21 +150,41 @@ export default function GradesPage() {
     setIsModalOpen(true);
   };
 
+  // TODO: Filter students by selectedCampus.id once student data includes campusId
+  const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
+
   const filteredGrades = selectedStudentId ? grades.filter(g => g.studentId === selectedStudentId) : [];
   const selectedStudentDetails = selectedStudentId ? getStudentById(selectedStudentId) : null;
   const selectedStudentName = selectedStudentDetails ? `${selectedStudentDetails.firstName} ${selectedStudentDetails.lastName}` : 'el estudiante';
 
 
-  if (!studentsLoaded || isLoadingGrades) {
+  if (!studentsLoaded || isLoadingGrades || campusLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <GraduationCap className="h-16 w-16 animate-spin text-primary" />
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
            <p className="ml-4 text-lg text-muted-foreground">Cargando datos de notas...</p>
         </div>
       </DashboardLayout>
     );
   }
+
+  if (!selectedCampus) {
+     return (
+      <DashboardLayout>
+        <Card className="text-center">
+          <CardHeader>
+            <Building2 className="mx-auto h-12 w-12 text-primary mb-4" />
+            <CardTitle>No hay Sede Seleccionada</CardTitle>
+            <CardDescription>
+              Por favor, seleccione una sede desde el <Link href="/dashboard" className="text-primary hover:underline">Dashboard</Link> para gestionar las notas.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
 
   return (
     <DashboardLayout>
@@ -158,7 +195,7 @@ export default function GradesPage() {
             <div>
               <CardTitle className="text-2xl font-bold">Registro Auxiliar de Notas</CardTitle>
               <CardDescription>
-                Gestione las calificaciones de los estudiantes.
+                Sede: {selectedCampus.name}. Gestione las calificaciones de los estudiantes.
               </CardDescription>
             </div>
           </div>
@@ -171,17 +208,20 @@ export default function GradesPage() {
           <div className="mb-6">
             <Label htmlFor="student-select">Seleccionar Estudiante</Label>
             <Select value={selectedStudentId || ""} onValueChange={setSelectedStudentId}>
-              <SelectTrigger id="student-select">
+              <SelectTrigger id="student-select" disabled={studentsForSelectedCampus.length === 0}>
                 <SelectValue placeholder="Seleccione un estudiante..." />
               </SelectTrigger>
               <SelectContent>
-                {students.map(student => (
+                {studentsForSelectedCampus.map(student => (
                   <SelectItem key={student.id} value={student.id}>
                     {student.firstName} {student.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+             {studentsForSelectedCampus.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-1">No hay estudiantes en esta sede. Agregue estudiantes primero.</p>
+            )}
           </div>
 
           {selectedStudentId ? (
@@ -308,4 +348,3 @@ export default function GradesPage() {
     </DashboardLayout>
   );
 }
-

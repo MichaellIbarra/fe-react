@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { dataAnomalyChecker, type DataAnomalyCheckerOutput } from "@/ai/flows/data-anomaly-checker";
 import { useAuth } from "@/contexts/AuthContext";
-// import { useRouter } from "next/navigation"; // For programmatic redirect
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   studentName: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres." }).max(100),
@@ -27,20 +26,19 @@ export default function AnomalyCheckerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<DataAnomalyCheckerOutput | null>(null);
   const { toast } = useToast();
-  const { currentUser } = useAuth();
-  // const router = useRouter();
+  const { currentUser, isAuthLoading } = useAuth();
+  const router = useRouter();
 
-  // useEffect(() => {
-  //   // Example of protecting the page route-wise, though navigation hiding is the primary method here.
-  //   if (currentUser && currentUser.role !== 'superuser') {
-  //     toast({
-  //       variant: "destructive",
-  //       title: "Acceso Denegado",
-  //       description: "No tiene permisos para acceder a esta página.",
-  //     });
-  //     router.push('/dashboard'); // Redirect to dashboard
-  //   }
-  // }, [currentUser, router, toast]);
+  useEffect(() => {
+    if (!isAuthLoading && currentUser && currentUser.role !== 'superuser') {
+      toast({
+        variant: "destructive",
+        title: "Acceso Denegado",
+        description: "No tiene permisos para acceder a esta página.",
+      });
+      router.push('/dashboard'); 
+    }
+  }, [currentUser, isAuthLoading, router, toast]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -72,9 +70,17 @@ export default function AnomalyCheckerPage() {
     }
   }
   
-  // If user is not superuser, they shouldn't even see the link.
-  // If they somehow land here, we can show a message or redirect (handled by useEffect above if uncommented).
-  if (currentUser && currentUser.role !== 'superuser') {
+  if (isAuthLoading || !currentUser) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (currentUser.role !== 'superuser') {
     return (
       <DashboardLayout>
         <Card>

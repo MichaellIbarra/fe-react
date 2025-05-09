@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-// import { GeistSans } from 'geist/font/sans'; // Removed
+import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { Providers } from '@/lib/providers';
 import { Toaster } from '@/components/ui/toaster';
@@ -15,9 +15,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body
-        className={`antialiased`} // Removed GeistSans.variable, font-family is from globals.css
+        className={`${GeistSans.variable} antialiased`}
       >
         <Providers>
           {children}

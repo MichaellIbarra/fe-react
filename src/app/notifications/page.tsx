@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ChangeEvent } from 'react';
@@ -12,13 +11,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Send, MessageSquare, Loader2, CheckCircle, AlertTriangle, Info } from "lucide-react";
+import { Send, MessageSquare, Loader2, CheckCircle, AlertTriangle, Info, Building2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { sendGuardianNotification, type SendGuardianNotificationOutput } from "@/ai/flows/send-notification-flow";
 import { useStudentContext } from "@/contexts/StudentContext";
 import type { LegacyStudent } from "@/types";
 import { useAuth } from '@/contexts/AuthContext';
+import { useCampusContext } from "@/contexts/CampusContext";
+import Link from "next/link";
 
 const formSchema = z.object({
   studentId: z.string().min(1, { message: "Debe seleccionar un estudiante." }),
@@ -34,6 +35,7 @@ export default function NotificationsPage() {
   const { toast } = useToast();
   const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
   const { currentUser } = useAuth();
+  const { selectedCampus, isLoadingSelection: campusLoading } = useCampusContext();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -62,13 +64,18 @@ export default function NotificationsPage() {
       });
       return;
     }
+     if (!selectedCampus) {
+      toast({ variant: "destructive", title: "Error", description: "No hay sede seleccionada." });
+      return;
+    }
     setIsLoading(true);
     setResult(null);
     try {
       const aiResult = await sendGuardianNotification({
         studentId: selectedStudent.id,
         studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
-        guardianPhoneNumber: selectedStudent.guardianPhoneNumber,
+        // Ensure guardianPhoneNumber is a string, even if optional in LegacyStudent type
+        guardianPhoneNumber: selectedStudent.guardianPhoneNumber || "N/A", 
         messageContent: values.messageContent,
       });
       setResult(aiResult);
@@ -89,28 +96,36 @@ export default function NotificationsPage() {
     }
   }
   
-  if (!studentsLoaded) {
+  // TODO: Filter students by selectedCampus.id once student data includes campusId
+  const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
+
+  if (!studentsLoaded || campusLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-full">
           <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <p className="ml-4 text-lg text-muted-foreground">Cargando datos de estudiantes...</p>
+          <p className="ml-4 text-lg text-muted-foreground">Cargando datos...</p>
         </div>
       </DashboardLayout>
     );
   }
 
-  // Role-based access (example)
-  // if (currentUser && currentUser.role !== 'superuser' && currentUser.role !== 'normal') {
-  //   return (
-  //     <DashboardLayout>
-  //       <Card>
-  //         <CardHeader><CardTitle>Acceso Denegado</CardTitle></CardHeader>
-  //         <CardContent><p>No tiene permisos para acceder a esta página.</p></CardContent>
-  //       </Card>
-  //     </DashboardLayout>
-  //   );
-  // }
+  if (!selectedCampus) {
+     return (
+      <DashboardLayout>
+        <Card className="text-center">
+          <CardHeader>
+            <Building2 className="mx-auto h-12 w-12 text-primary mb-4" />
+            <CardTitle>No hay Sede Seleccionada</CardTitle>
+            <CardDescription>
+              Por favor, seleccione una sede desde el <Link href="/dashboard" className="text-primary hover:underline">Dashboard</Link> para enviar notificaciones.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
 
   return (
     <DashboardLayout>
@@ -121,7 +136,7 @@ export default function NotificationsPage() {
             <div>
               <CardTitle className="text-2xl font-bold">Enviar Notificación a Apoderados</CardTitle>
               <CardDescription>
-                Seleccione un estudiante y redacte el mensaje para su apoderado.
+                Sede: {selectedCampus.name}. Seleccione un estudiante y redacte el mensaje.
               </CardDescription>
             </div>
           </CardHeader>
@@ -134,20 +149,28 @@ export default function NotificationsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Seleccionar Estudiante</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value} 
+                        disabled={isLoading || studentsForSelectedCampus.length === 0}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Elija un estudiante..." />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {students.map(student => (
+                          {studentsForSelectedCampus.map(student => (
                             <SelectItem key={student.id} value={student.id}>
                               {student.firstName} {student.lastName} ({student.grade} &quot;{student.section}&quot;)
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {studentsForSelectedCampus.length === 0 && (
+                        <p className="text-sm text-muted-foreground mt-1">No hay estudiantes en esta sede.</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
