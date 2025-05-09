@@ -3,25 +3,48 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') return false; // Default for SSR or before client-side check
-    return window.innerWidth < MOBILE_BREAKPOINT;
-  });
+  // Initialize with a value that won't cause a mismatch with SSR.
+  // SSR typically renders as "desktop" (isMobile = false).
+  const [isMobile, setIsMobile] = React.useState(false);
+  // Track if the component has mounted to switch to client-side values.
+  const [hasMounted, setHasMounted] = React.useState(false);
 
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
+    // Set hasMounted to true after the first render on the client.
+    setHasMounted(true);
 
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
+    // Function to check mobile status.
+    // Ensure window is defined (it will be in useEffect).
+    const checkIsMobile = () => {
+      if (typeof window === 'undefined') return false;
+      return window.innerWidth < MOBILE_BREAKPOINT;
+    }
     
-    // Ensure the state is correct after initial mount, in case `window.innerWidth` changed
-    // between the `useState` initializer and `useEffect` running.
-    onChange(); 
+    // Set the initial client-side mobile status.
+    setIsMobile(checkIsMobile());
 
-    window.addEventListener("resize", onChange);
-    return () => window.removeEventListener("resize", onChange);
-  }, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
+    // Listener for window resize.
+    const handleResize = () => {
+      setIsMobile(checkIsMobile());
+    };
 
+    if (typeof window !== 'undefined') {
+        window.addEventListener("resize", handleResize);
+    }
+    
+    // Cleanup listener on unmount.
+    return () => {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener("resize", handleResize);
+        }
+    };
+  }, []); // Empty dependency array: run only on mount and unmount.
+
+  // Before mounting on the client, `hasMounted` is false. Return `false` to match SSR.
+  // After mounting, `hasMounted` is true. Return the actual `isMobile` state.
+  if (!hasMounted) {
+    // During SSR or before client-side mount, assume not mobile to match server render.
+    return false; 
+  }
   return isMobile;
 }
