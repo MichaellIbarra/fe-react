@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 "use client";
 
 import * as React from 'react';
@@ -59,6 +59,7 @@ const baseNavItems: NavItem[] = [
   { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'], requiresCampus: false }, 
 ];
 
+// These are now only for UserNav, not sidebar
 const profileAndSettingsNavItems: NavItem[] = [
     { href: '/profile', label: 'Perfil', icon: UserCircle, requiresCampus: false },
     { href: '/settings', label: 'Configuración', icon: Settings, requiresCampus: false },
@@ -111,14 +112,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [currentUser, isAuthLoading, router]);
 
-  const allNavItems = [...baseNavItems, ...profileAndSettingsNavItems];
-
-  const accessibleNavItems = allNavItems.filter(item => {
-    const roleMatch = !item.roles || item.roles.length === 0 || (currentUser && item.roles.includes(currentUser.role));
-    const campusRequirementMet = !item.requiresCampus || (item.requiresCampus && selectedCampus != null);
-    return roleMatch && campusRequirementMet;
-  });
-  
   const isItemDisabled = (item: NavItem): boolean => {
     if (item.requiresCampus && !selectedCampus) return true;
     return false;
@@ -135,7 +128,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
   
   const sidebarTitle = selectedCampus ? selectedCampus.name : "EduAssist";
-  const SidebarIcon = selectedCampus ? Building2 : School;
+  const SidebarIconComponent = selectedCampus ? Building2 : School;
 
 
   return (
@@ -148,11 +141,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         >
           <SidebarHeader className="p-4 flex items-center justify-between">
              <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden" aria-label={sidebarTitle}>
-                <SidebarIcon className="h-7 w-7 text-sidebar-foreground" />
+                <SidebarIconComponent className="h-7 w-7 text-sidebar-foreground" />
                 <span className="font-semibold text-xl text-sidebar-foreground truncate max-w-[150px]">{sidebarTitle}</span>
              </Link>
              <Link href="/dashboard" className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center hidden w-full py-1.5" aria-label={sidebarTitle}>
-                <SidebarIcon className="h-7 w-7 text-sidebar-foreground" />
+                <SidebarIconComponent className="h-7 w-7 text-sidebar-foreground" />
              </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
@@ -183,23 +176,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 );
               })}
             </SidebarMenu>
-            <div className="mt-auto p-2 space-y-1">
-                 {profileAndSettingsNavItems.map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                         <Link href={item.href} passHref legacyBehavior>
-                            <SidebarMenuButton
-                                isActive={pathname === item.href || pathname.startsWith(item.href)}
-                                tooltip={{ children: item.label, className: "whitespace-nowrap" }}
-                                className="justify-start"
-                                aria-current={pathname === item.href ? "page" : undefined}
-                            >
-                                <item.icon className="h-5 w-5" />
-                                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                ))}
-            </div>
+            {/* Profile and Settings items are removed from here as they are in UserNav */}
           </SidebarContent>
         </Sidebar>
 
