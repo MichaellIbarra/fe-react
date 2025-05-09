@@ -15,19 +15,19 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, Camera, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Student, AttendanceRecord } from "@/types";
+import type { LegacyStudent, LegacyAttendanceRecord } from "@/types"; // Updated import
 import { useToast } from "@/hooks/use-toast";
 import QrCodeDisplay from "@/components/QrCodeDisplay";
 import QrScanner from "@/components/QrScanner";
 import { useStudentContext } from "@/contexts/StudentContext";
 
-type AttendanceStatus = AttendanceRecord["status"];
+type AttendanceStatus = LegacyAttendanceRecord["status"]; // Updated type
 
 interface QrScannerModalContentProps {
   selectedDate: Date;
   onAttendanceRecorded: (studentId: string, studentName: string) => void;
   onClose: () => void;
-  getStudentById: (studentId: string) => Student | undefined;
+  getStudentById: (studentId: string) => LegacyStudent | undefined; // Updated type
 }
 
 const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedDate, onAttendanceRecorded, onClose, getStudentById }) => {
@@ -43,9 +43,8 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
     setScanResult(null);
     setError(null);
     setLastScannedData(null);
-    // Re-initialize camera check to attempt getting permission again if it failed
     setHasCameraPermission(null); 
-    setIsScanning(false); // Explicitly set isScanning to false
+    setIsScanning(false); 
   };
   
   useEffect(() => {
@@ -74,7 +73,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
       }
     };
 
-    if (hasCameraPermission === null) { // Only request if permission status is unknown
+    if (hasCameraPermission === null) { 
         requestCameraPermission();
     }
     
@@ -84,7 +83,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [toast, hasCameraPermission]); // hasCameraPermission in dependency array to re-run if reset
+  }, [toast, hasCameraPermission]);
 
 
   const handleScanSuccess = (decodedText: string) => {
@@ -125,7 +124,6 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
   };
 
   const handleScanFailure = (errorMessage: string) => {
-    // This can be noisy, log for debug if needed but don't show UI error unless critical
     // console.warn(`QR Scan Failure: ${errorMessage}`);
   };
   
@@ -148,9 +146,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
         </AlertDescription>
       </Alert>
 
-      {/* Video element always present for srcObject binding, hidden via CSS if not actively scanning */}
       <video ref={videoRef} className={`w-full aspect-video rounded-md ${!isScanning || !hasCameraPermission ? 'hidden' : ''}`} autoPlay muted />
-
 
       {!hasCameraPermission && ( 
         <Alert variant="destructive">
@@ -198,7 +194,6 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
         </Alert>
       )}
 
-
       {!isScanning && hasCameraPermission && ( 
         <Button onClick={() => { setScanResult(null); setError(null); setLastScannedData(null); setIsScanning(true);}} className="w-full">
           Escanear Otro Código
@@ -220,7 +215,7 @@ export default function AttendancePage() {
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isQrScannerModalOpen, setIsQrScannerModalOpen] = useState(false);
-  const [selectedStudentForQr, setSelectedStudentForQr] = useState<Pick<Student, "id" | "firstName" | "lastName"> | null>(null);
+  const [selectedStudentForQr, setSelectedStudentForQr] = useState<Pick<LegacyStudent, "id" | "firstName" | "lastName"> | null>(null); // Updated type
   const [qrValue, setQrValue] = useState("");
 
 
@@ -248,10 +243,8 @@ export default function AttendancePage() {
       });
       return;
     }
-    // Here you would typically save the attendanceData to a backend or localStorage
-    // For now, just logging to console
-    const savedRecords: AttendanceRecord[] = Object.entries(attendanceData).map(([studentId, status]) => ({
-      id: `${studentId}-${selectedDate.toISOString()}`, // Simple unique ID for the record
+    const savedRecords: LegacyAttendanceRecord[] = Object.entries(attendanceData).map(([studentId, status]) => ({ // Updated type
+      id: `${studentId}-${selectedDate.toISOString()}`, 
       studentId,
       date: selectedDate.toISOString(),
       status,
@@ -263,7 +256,7 @@ export default function AttendancePage() {
     });
   };
 
-  const handleShowQr = (student: Pick<Student, "id" | "firstName" | "lastName">) => {
+  const handleShowQr = (student: Pick<LegacyStudent, "id" | "firstName" | "lastName">) => { // Updated type
     setSelectedStudentForQr(student);
     const qrData = {
       type: "eduassist_student_id",
@@ -276,8 +269,6 @@ export default function AttendancePage() {
   
   const handleAttendanceRecordedByQr = (studentId: string, studentName: string) => {
     handleStatusChange(studentId, 'Presente');
-    // Optionally, close the scanner modal
-    // setIsQrScannerModalOpen(false); 
   };
 
 
@@ -413,4 +404,3 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
-

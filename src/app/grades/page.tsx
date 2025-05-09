@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users } from "lucide-react";
-import type { Student, Grade } from "@/types";
+import type { LegacyStudent, LegacyGrade } from "@/types"; // Updated import
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +28,7 @@ const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimest
 const gradeSchema = z.object({
   studentId: z.string().min(1, "Debe seleccionar un estudiante."),
   subjectArea: z.string().min(1, "Debe seleccionar una materia."),
-  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."), // Can be numeric or literal like "AD"
+  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."), 
   period: z.string().min(1, "Debe seleccionar un periodo."),
 });
 
@@ -36,10 +36,10 @@ type GradeFormData = z.infer<typeof gradeSchema>;
 
 export default function GradesPage() {
   const { students, getStudentById } = useStudentContext();
-  const [grades, setGrades] = useState<Grade[]>([]);
+  const [grades, setGrades] = useState<LegacyGrade[]>([]); // Updated type
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
+  const [editingGrade, setEditingGrade] = useState<LegacyGrade | null>(null); // Updated type
   const { toast } = useToast();
 
   const form = useForm<GradeFormData>({
@@ -74,7 +74,7 @@ export default function GradesPage() {
 
 
   const onSubmit = (data: GradeFormData) => {
-    const newGrade: Grade = {
+    const newGrade: LegacyGrade = { // Updated type
       ...data,
       id: editingGrade ? editingGrade.id : String(Date.now()),
       dateAssigned: new Date().toISOString(),
@@ -96,7 +96,7 @@ export default function GradesPage() {
     toast({ title: "Nota Eliminada", description: "La nota ha sido eliminada.", variant: "destructive" });
   };
 
-  const openEditModal = (grade: Grade) => {
+  const openEditModal = (grade: LegacyGrade) => { // Updated type
     setEditingGrade(grade);
     setIsModalOpen(true);
   };
@@ -207,7 +207,6 @@ export default function GradesPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            {/* Student field is pre-filled or hidden if already selected */}
              <Controller
                 name="studentId"
                 control={form.control}

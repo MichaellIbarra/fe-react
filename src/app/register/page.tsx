@@ -15,7 +15,7 @@ import { Loader2, UserPlus, School, ArrowLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Link from "next/link";
-import type { UserRole } from "@/types";
+import type { LegacyUserRole } from "@/types"; // Updated import
 
 const registerFormSchema = z.object({
   name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres." }).max(50),
@@ -49,7 +49,7 @@ export default function RegisterPage() {
 
   async function onSubmit(values: RegisterFormValues) {
     setIsLoading(true);
-    const result = await registerUser(values.name, values.email, values.password, values.role as UserRole);
+    const result = await registerUser(values.name, values.email, values.password, values.role as LegacyUserRole); // Updated type cast
     setIsLoading(false);
 
     if (result.success) {

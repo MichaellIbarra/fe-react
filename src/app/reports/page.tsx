@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, CalendarCheck, Download, Loader2 } from "lucide-react";
-import type { Student, ProgressReport, Grade, AttendanceRecord } from "@/types";
+import type { LegacyStudent, LegacyProgressReport, LegacyGrade, LegacyAttendanceRecord } from "@/types"; // Updated import
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -20,8 +20,7 @@ import * as XLSX from 'xlsx';
 import { useStudentContext } from "@/contexts/StudentContext";
 
 
-// Mock data for grades and attendance (student data comes from context)
-const mockGrades: Grade[] = [
+const mockGrades: LegacyGrade[] = [ // Updated type
   { id: "g1", studentId: "1", subjectArea: "Matemáticas", gradeValue: "A", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
   { id: "g2", studentId: "1", subjectArea: "Comunicación", gradeValue: "AD", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
   { id: "g3", studentId: "2", subjectArea: "Ciencias", gradeValue: "15", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
@@ -29,16 +28,16 @@ const mockGrades: Grade[] = [
   { id: "g5", studentId: "3", subjectArea: "Personal Social", gradeValue: "18", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
 ];
 
-const mockAttendance: AttendanceRecord[] = [
+const mockAttendance: LegacyAttendanceRecord[] = [ // Updated type
   { id: "a1", studentId: "1", date: new Date().toISOString(), status: "Presente" },
-  { id: "a2", studentId: "1", date: new Date(Date.now() - 86400000).toISOString(), status: "Ausente" }, // Yesterday
+  { id: "a2", studentId: "1", date: new Date(Date.now() - 86400000).toISOString(), status: "Ausente" }, 
   { id: "a3", studentId: "2", date: new Date().toISOString(), status: "Tardanza" },
   { id: "a4", studentId: "3", date: new Date().toISOString(), status: "Presente" },
   { id: "a5", studentId: "3", date: new Date(Date.now() - 86400000 * 2).toISOString(), status: "Justificado" },
 ];
 
 
-function generateMockReport(student: Student | undefined, period: string): ProgressReport | null {
+function generateMockReport(student: LegacyStudent | undefined, period: string): LegacyProgressReport | null { // Updated types
   if (!student) return null;
 
   const studentGrades = mockGrades.filter(g => g.studentId === student.id && g.period === period);
@@ -69,7 +68,6 @@ function generateMockReport(student: Student | undefined, period: string): Progr
 
 const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimestre 4"];
 
-// Helper to trigger file download
 function downloadFile(blob: Blob, filename: string) {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -80,8 +78,7 @@ function downloadFile(blob: Blob, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-// PDF Generation
-function createPdf(report: ProgressReport, student: Student): jsPDF {
+function createPdf(report: LegacyProgressReport, student: LegacyStudent): jsPDF { // Updated types
   const doc = new jsPDF();
   const generationDate = format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
 
@@ -153,8 +150,7 @@ function createPdf(report: ProgressReport, student: Student): jsPDF {
   return doc;
 }
 
-// CSV Generation
-function createCsv(report: ProgressReport, student: Student): string {
+function createCsv(report: LegacyProgressReport, student: LegacyStudent): string { // Updated types
   let csvContent = "Tipo de Dato,Clave,Valor\n";
 
   csvContent += `Información del Estudiante,ID,"${student.id}"\n`;
@@ -188,8 +184,7 @@ function createCsv(report: ProgressReport, student: Student): string {
   return csvContent;
 }
 
-// XLS Generation
-function createXls(report: ProgressReport, student: Student): ArrayBuffer {
+function createXls(report: LegacyProgressReport, student: LegacyStudent): ArrayBuffer { // Updated types
   const wb = XLSX.utils.book_new();
 
   const summaryData = [
@@ -239,7 +234,7 @@ export default function ReportsPage() {
   const { students, getStudentById } = useStudentContext();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>(mockPeriods[0]);
-  const [reportData, setReportData] = useState<ProgressReport | null>(null);
+  const [reportData, setReportData] = useState<LegacyProgressReport | null>(null); // Updated type
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
@@ -298,7 +293,7 @@ export default function ReportsPage() {
       } else if (formatType === 'csv') {
         filename = `${baseFilename}.csv`;
         const csvData = createCsv(reportData, studentDetails);
-        blob = new Blob([String.fromCharCode(0xFEFF), csvData], { type: 'text/csv;charset=utf-8;' }); // Added BOM for Excel
+        blob = new Blob([String.fromCharCode(0xFEFF), csvData], { type: 'text/csv;charset=utf-8;' }); 
         downloadFile(blob, filename);
         toast({ title: "Descarga Iniciada", description: `El informe CSV '${filename}' se está descargando.` });
       } else if (formatType === 'xls') {
@@ -423,7 +418,7 @@ export default function ReportsPage() {
                         {reportData.gradesBySubject.map((gradeItem, index) => (
                           <TableRow key={index}>
                             <TableCell>{gradeItem.subject}</TableCell>
-                            <TableCell className="font-medium">{gradeItem.grade}</TableCell>
+                            <TableCell className="font-medium">{String(gradeItem.grade)}</TableCell>
                             <TableCell className="text-xs italic">{gradeItem.comments}</TableCell>
                           </TableRow>
                         ))}

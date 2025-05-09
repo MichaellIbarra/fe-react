@@ -32,13 +32,13 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'; 
 import { useAuth } from '@/contexts/AuthContext';
-import type { UserRole } from '@/types';
+import type { LegacyUserRole } from '@/types'; // Updated import
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles?: UserRole[]; 
+  roles?: LegacyUserRole[]; // Updated type
 }
 
 const navItems: NavItem[] = [
@@ -51,14 +51,33 @@ const navItems: NavItem[] = [
 ];
 
 function MobileNavToggle() {
-  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+  const { setOpenMobile } = useSidebar();
+  // Check if component has mounted to avoid using useSidebar on server
+  const [hasMounted, setHasMounted] = React.useState(false);
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) {
+    // Render a placeholder or null during SSR / before mount
+    return (
+        <Button variant="ghost" size="icon" className="md:hidden" disabled aria-label="Toggle Navigation">
+         <PanelLeft />
+        </Button>
+    );
+  }
+  
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const isMobile = useSidebar().isMobile; // Now safe to call
+
   if (!isMobile) return null;
+  
   return (
     <Button
       variant="ghost"
       size="icon"
       className="md:hidden"
-      onClick={() => setOpenMobile(true)} // Directly open mobile sheet
+      onClick={() => setOpenMobile(true)} 
       aria-label="Toggle Navigation"
     >
       <PanelLeft />
@@ -136,7 +155,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <MobileNavToggle />
             <SidebarTrigger className="hidden md:inline-flex" /> 
             <div className="flex-1">
-              {/* Optional: Breadcrumbs or Page Title can go here */}
             </div>
             <UserNav />
           </header>

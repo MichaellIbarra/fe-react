@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Activity, BarChart3, Users, CheckSquare } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
-import type { UserRole } from "@/types"; // Import UserRole
+import { useAuth } from "@/contexts/AuthContext"; 
+import type { LegacyUserRole } from "@/types"; // Updated import
 
 interface QuickAccessItemData {
   title: string;
   href: string;
   icon: React.ElementType;
   description: string;
-  roles?: UserRole[]; // Roles that can see this item
+  roles?: LegacyUserRole[]; // Updated type
 }
 
 const allQuickAccessItems: QuickAccessItemData[] = [

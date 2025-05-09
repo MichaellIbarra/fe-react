@@ -16,7 +16,7 @@ import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search } from "luci
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Student } from "@/types";
+import type { LegacyStudent } from "@/types"; // Updated import
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useStudentContext } from "@/contexts/StudentContext";
@@ -40,8 +40,8 @@ type StudentFormData = z.infer<typeof studentSchema>;
 export default function StudentsPage() {
   const { students, addStudent, updateStudent, deleteStudent } = useStudentContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<LegacyStudent | null>(null); // Updated type
+  const [viewingStudent, setViewingStudent] = useState<LegacyStudent | null>(null); // Updated type
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
@@ -84,7 +84,7 @@ export default function StudentsPage() {
       updateStudent({ ...editingStudent, ...data });
       toast({ title: "Estudiante Actualizado", description: "Los datos del estudiante han sido actualizados." });
     } else {
-      addStudent(data);
+      addStudent(data as Omit<LegacyStudent, 'id'>); // Ensure data matches Omit<LegacyStudent, 'id'>
       toast({ title: "Estudiante Agregado", description: "El nuevo estudiante ha sido agregado." });
     }
     setIsModalOpen(false);
@@ -96,7 +96,7 @@ export default function StudentsPage() {
     toast({ title: "Estudiante Eliminado", description: "El estudiante ha sido eliminado.", variant: "destructive" });
   };
 
-  const openEditModal = (student: Student) => {
+  const openEditModal = (student: LegacyStudent) => { // Updated type
     setEditingStudent(student);
     setViewingStudent(null);
     setIsModalOpen(true);
@@ -108,7 +108,7 @@ export default function StudentsPage() {
     setIsModalOpen(true);
   };
   
-  const openViewModal = (student: Student) => {
+  const openViewModal = (student: LegacyStudent) => { // Updated type
     setViewingStudent(student);
     setEditingStudent(null);
     setIsModalOpen(true);

@@ -3,32 +3,31 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
-import type { User, UserRole } from '@/types';
+import type { LegacyUser, LegacyUserRole } from '@/types'; // Updated import
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
-  currentUser: User | null;
+  currentUser: LegacyUser | null; // Updated type
   isAuthLoading: boolean;
   login: (email: string, passwordAttempt: string) => Promise<boolean>;
   logout: () => void;
-  registerUser: (name: string, email: string, passwordHint: string, role: UserRole) => Promise<{ success: boolean, message: string }>;
+  registerUser: (name: string, email: string, passwordHint: string, role: LegacyUserRole) => Promise<{ success: boolean, message: string }>; // Updated type
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const initialDefaultUsers: User[] = [
+const initialDefaultUsers: LegacyUser[] = [ // Updated type
   { id: 'super1', name: 'Admin General', email: 'admin@eduassist.com', role: 'superuser', avatarSeed: 'admin@eduassist.com', passwordHint: 'super1' },
   { id: 'normal1', name: 'Profesor Ejemplo', email: 'profesor@eduassist.com', role: 'normal', avatarSeed: 'profesor@eduassist.com', passwordHint: 'normal1' },
 ];
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [currentUser, setCurrentUserInternal] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(initialDefaultUsers);
+  const [currentUser, setCurrentUserInternal] = useState<LegacyUser | null>(null); // Updated type
+  const [users, setUsers] = useState<LegacyUser[]>(initialDefaultUsers); // Updated type
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Attempt to load users and current user from localStorage on initial client render
     if (typeof window !== 'undefined') {
       const storedUsers = localStorage.getItem('users');
       if (storedUsers) {
@@ -37,10 +36,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (e) {
           console.error("Failed to parse stored users:", e);
           localStorage.removeItem('users'); 
-          setUsers(initialDefaultUsers); // Fallback to initial
+          setUsers(initialDefaultUsers); 
         }
       } else {
-        // If no users in localStorage, initialize it with default users
         localStorage.setItem('users', JSON.stringify(initialDefaultUsers));
       }
 
@@ -58,14 +56,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Persist users to localStorage whenever it changes
     if (typeof window !== 'undefined' && !isAuthLoading) {
       localStorage.setItem('users', JSON.stringify(users));
     }
   }, [users, isAuthLoading]);
 
   useEffect(() => {
-    // Persist currentUser to localStorage whenever it changes
     if (typeof window !== 'undefined' && !isAuthLoading) { 
       if (currentUser) {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -91,18 +87,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentUserInternal(null);
   };
 
-  const registerUser = async (name: string, email: string, passwordHint: string, role: UserRole): Promise<{ success: boolean, message: string }> => {
+  const registerUser = async (name: string, email: string, passwordHint: string, role: LegacyUserRole): Promise<{ success: boolean, message: string }> => { // Updated type
     await new Promise(resolve => setTimeout(resolve, 300));
     const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
     if (emailExists) {
       return { success: false, message: "Este correo electrónico ya está registrado." };
     }
 
-    const newUser: User = {
+    const newUser: LegacyUser = { // Updated type
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       name,
       email,
-      passwordHint, // In a real app, hash this password
+      passwordHint, 
       role,
       avatarSeed: email,
     };
