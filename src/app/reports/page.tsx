@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FileText, UserCircle, BarChart2, ClipboardList, AlertCircle, CalendarCheck, Download, Loader2 } from "lucide-react";
-import type { LegacyStudent, LegacyProgressReport, LegacyGrade, LegacyAttendanceRecord } from "@/types"; // Updated import
+import type { LegacyStudent, LegacyProgressReport, LegacyGrade, LegacyAttendanceRecord } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -19,33 +19,52 @@ import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useStudentContext } from "@/contexts/StudentContext";
 
+const GRADES_STORAGE_KEY = "eduassist_grades";
+const getAttendanceStorageKey = (date: Date) => `eduassist_attendance_${format(date, "yyyy-MM-dd")}`; // Helper to get attendance key
 
-const mockGrades: LegacyGrade[] = [ // Updated type
-  { id: "g1", studentId: "1", subjectArea: "Matemáticas", gradeValue: "A", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
-  { id: "g2", studentId: "1", subjectArea: "Comunicación", gradeValue: "AD", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
-  { id: "g3", studentId: "2", subjectArea: "Ciencias", gradeValue: "15", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
-  { id: "g4", studentId: "1", subjectArea: "Arte", gradeValue: "B", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
-  { id: "g5", studentId: "3", subjectArea: "Personal Social", gradeValue: "18", period: "Bimestre 1", dateAssigned: new Date().toISOString() },
-];
+const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimestre 4"];
 
-const mockAttendance: LegacyAttendanceRecord[] = [ // Updated type
-  { id: "a1", studentId: "1", date: new Date().toISOString(), status: "Presente" },
-  { id: "a2", studentId: "1", date: new Date(Date.now() - 86400000).toISOString(), status: "Ausente" }, 
-  { id: "a3", studentId: "2", date: new Date().toISOString(), status: "Tardanza" },
-  { id: "a4", studentId: "3", date: new Date().toISOString(), status: "Presente" },
-  { id: "a5", studentId: "3", date: new Date(Date.now() - 86400000 * 2).toISOString(), status: "Justificado" },
-];
-
-
-function generateMockReport(student: LegacyStudent | undefined, period: string): LegacyProgressReport | null { // Updated types
+function generateReport(student: LegacyStudent | undefined, period: string, allGrades: LegacyGrade[], allAttendanceRecords: Record<string, Record<string, LegacyAttendanceRecord["status"]>>): LegacyProgressReport | null {
   if (!student) return null;
 
-  const studentGrades = mockGrades.filter(g => g.studentId === student.id && g.period === period);
-  const studentAttendance = mockAttendance.filter(a => a.studentId === student.id); 
+  const studentGrades = allGrades.filter(g => g.studentId === student.id && g.period === period);
+  
+  // For attendance, we need to iterate through a range of dates for the given period (simplified here)
+  // This is a simplified mock; a real system would define period start/end dates.
+  // For this mock, we'll just use a few recent days as a proxy.
+  let presentDays = 0;
+  let absentDays = 0;
+  let lateDays = 0;
+  let totalConsideredDays = 0;
 
-  const presentDays = studentAttendance.filter(a => a.status === 'Presente').length;
-  const absentDays = studentAttendance.filter(a => a.status === 'Ausente').length;
-  const lateDays = studentAttendance.filter(a => a.status === 'Tardanza').length;
+  // Mocking attendance check for last 60 days if this period is current, otherwise it's more complex
+  const today = new Date();
+  for (let i = 0; i < 60; i++) { // Check last 60 days as a proxy for "current period" attendance
+      const dateToCheck = new Date(today);
+      dateToCheck.setDate(today.getDate() - i);
+      const dateKey = format(dateToCheck, "yyyy-MM-dd");
+      const attendanceForDateKey = `eduassist_attendance_${dateKey}`;
+      
+      // Attempt to get from direct localStorage or from the passed allAttendanceRecords
+      let dailyAttendance = allAttendanceRecords[attendanceForDateKey];
+      if (!dailyAttendance && typeof window !== 'undefined') {
+          const storedData = localStorage.getItem(attendanceForDateKey);
+          if (storedData) {
+              try {
+                dailyAttendance = JSON.parse(storedData);
+              } catch (e) { /* ignore */ }
+          }
+      }
+
+      if (dailyAttendance && dailyAttendance[student.id]) {
+          totalConsideredDays++;
+          const status = dailyAttendance[student.id];
+          if (status === 'Presente') presentDays++;
+          else if (status === 'Ausente') absentDays++;
+          else if (status === 'Tardanza') lateDays++;
+      }
+  }
+
 
   return {
     id: `report-${student.id}-${period.replace(" ", "-")}`,
@@ -54,11 +73,11 @@ function generateMockReport(student: LegacyStudent | undefined, period: string):
     summary: `Informe de progreso para ${student.firstName} ${student.lastName} durante el ${period}. En general, ${student.firstName} ha demostrado un progreso ${studentGrades.length > 1 && (studentGrades[0].gradeValue === "AD" || Number(studentGrades[0].gradeValue) > 15) ? "sobresaliente" : "adecuado"} en sus asignaturas. Se recomienda seguir fomentando la participación activa en clase.`,
     gradesBySubject: studentGrades.map(g => ({ subject: g.subjectArea, grade: g.gradeValue, comments: "Buen desempeño." })),
     behavioralObservations: "Muestra una actitud positiva y colaboradora en el aula. A veces se distrae durante las explicaciones, pero responde bien a los recordatorios.",
-    futRequests: [
+    futRequests: [ // FUT requests remain static mock for now
       { date: new Date(Date.now() - 86400000 * 5).toISOString(), reason: "Solicitud de constancia de estudios.", status: "Atendido" },
     ],
     attendanceSummary: {
-      totalDays: studentAttendance.length, 
+      totalDays: totalConsideredDays, 
       present: presentDays,
       absent: absentDays,
       late: lateDays,
@@ -66,7 +85,6 @@ function generateMockReport(student: LegacyStudent | undefined, period: string):
   };
 }
 
-const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimestre 4"];
 
 function downloadFile(blob: Blob, filename: string) {
   const link = document.createElement('a');
@@ -78,7 +96,7 @@ function downloadFile(blob: Blob, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-function createPdf(report: LegacyProgressReport, student: LegacyStudent): jsPDF { // Updated types
+function createPdf(report: LegacyProgressReport, student: LegacyStudent): jsPDF {
   const doc = new jsPDF();
   const generationDate = format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
 
@@ -150,7 +168,7 @@ function createPdf(report: LegacyProgressReport, student: LegacyStudent): jsPDF 
   return doc;
 }
 
-function createCsv(report: LegacyProgressReport, student: LegacyStudent): string { // Updated types
+function createCsv(report: LegacyProgressReport, student: LegacyStudent): string {
   let csvContent = "Tipo de Dato,Clave,Valor\n";
 
   csvContent += `Información del Estudiante,ID,"${student.id}"\n`;
@@ -184,7 +202,7 @@ function createCsv(report: LegacyProgressReport, student: LegacyStudent): string
   return csvContent;
 }
 
-function createXls(report: LegacyProgressReport, student: LegacyStudent): ArrayBuffer { // Updated types
+function createXls(report: LegacyProgressReport, student: LegacyStudent): ArrayBuffer {
   const wb = XLSX.utils.book_new();
 
   const summaryData = [
@@ -231,12 +249,37 @@ function createXls(report: LegacyProgressReport, student: LegacyStudent): ArrayB
 
 
 export default function ReportsPage() {
-  const { students, getStudentById } = useStudentContext();
+  const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>(mockPeriods[0]);
-  const [reportData, setReportData] = useState<LegacyProgressReport | null>(null); // Updated type
+  const [reportData, setReportData] = useState<LegacyProgressReport | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
+  const [allGrades, setAllGrades] = useState<LegacyGrade[]>([]);
+  const [allAttendance, setAllAttendance] = useState<Record<string, Record<string, LegacyAttendanceRecord["status"]>>>({});
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLoadingData(true);
+      const storedGrades = localStorage.getItem(GRADES_STORAGE_KEY);
+      if (storedGrades) {
+        try {
+          setAllGrades(JSON.parse(storedGrades));
+        } catch (e) { console.error("Failed to parse grades for reports", e); }
+      }
+
+      // For attendance, we'd ideally fetch relevant records, but for mock using localStorage:
+      // This part is tricky as attendance is stored per day.
+      // For simplicity, `generateReport` will try to access daily localStorage items.
+      // Or, we could try to aggregate some recent ones here if performance allows.
+      // For now, `generateReport` will handle individual day lookups.
+      // A more robust solution would involve a backend or a more complex local storage aggregation.
+      
+      setIsLoadingData(false);
+    }
+  }, []);
+
 
   const handleGenerateReport = () => {
     if (!selectedStudentId || !selectedPeriod) {
@@ -248,7 +291,8 @@ export default function ReportsPage() {
       return;
     }
     const student = getStudentById(selectedStudentId);
-    const generatedReport = generateMockReport(student, selectedPeriod);
+    // Pass all loaded grades and a reference to how attendance is stored (or the structure itself)
+    const generatedReport = generateReport(student, selectedPeriod, allGrades, {}); // Passing empty attendance initially, generateReport will handle lookup
     setReportData(generatedReport);
     if (generatedReport) {
       toast({
@@ -312,6 +356,17 @@ export default function ReportsPage() {
   };
 
   const currentStudentDetails = selectedStudentId ? getStudentById(selectedStudentId) : null;
+
+  if (!studentsLoaded || isLoadingData) {
+    return (
+     <DashboardLayout>
+       <div className="flex items-center justify-center h-64">
+         <FileText className="h-16 w-16 animate-spin text-primary" />
+          <p className="ml-4 text-lg text-muted-foreground">Cargando datos para informes...</p>
+       </div>
+     </DashboardLayout>
+   );
+ }
 
   return (
     <DashboardLayout>
@@ -488,3 +543,4 @@ export default function ReportsPage() {
     </DashboardLayout>
   );
 }
+

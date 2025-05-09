@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users } from "lucide-react";
-import type { LegacyStudent, LegacyGrade } from "@/types"; // Updated import
+import type { LegacyStudent, LegacyGrade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,19 +28,22 @@ const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimest
 const gradeSchema = z.object({
   studentId: z.string().min(1, "Debe seleccionar un estudiante."),
   subjectArea: z.string().min(1, "Debe seleccionar una materia."),
-  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."), 
+  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."),
   period: z.string().min(1, "Debe seleccionar un periodo."),
 });
 
 type GradeFormData = z.infer<typeof gradeSchema>;
 
+const GRADES_STORAGE_KEY = "eduassist_grades";
+
 export default function GradesPage() {
-  const { students, getStudentById } = useStudentContext();
-  const [grades, setGrades] = useState<LegacyGrade[]>([]); // Updated type
+  const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
+  const [grades, setGrades] = useState<LegacyGrade[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingGrade, setEditingGrade] = useState<LegacyGrade | null>(null); // Updated type
+  const [editingGrade, setEditingGrade] = useState<LegacyGrade | null>(null);
   const { toast } = useToast();
+  const [isLoadingGrades, setIsLoadingGrades] = useState(true);
 
   const form = useForm<GradeFormData>({
     resolver: zodResolver(gradeSchema),
@@ -51,6 +54,30 @@ export default function GradesPage() {
       period: "",
     },
   });
+
+  // Load grades from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedGrades = localStorage.getItem(GRADES_STORAGE_KEY);
+      if (storedGrades) {
+        try {
+          setGrades(JSON.parse(storedGrades));
+        } catch (error) {
+          console.error("Error parsing grades from localStorage:", error);
+          setGrades([]); // Fallback to empty array if parsing fails
+        }
+      }
+      setIsLoadingGrades(false);
+    }
+  }, []);
+
+  // Save grades to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isLoadingGrades) {
+      localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(grades));
+    }
+  }, [grades, isLoadingGrades]);
+
 
  useEffect(() => {
     if (isModalOpen) {
@@ -74,7 +101,7 @@ export default function GradesPage() {
 
 
   const onSubmit = (data: GradeFormData) => {
-    const newGrade: LegacyGrade = { // Updated type
+    const newGrade: LegacyGrade = {
       ...data,
       id: editingGrade ? editingGrade.id : String(Date.now()),
       dateAssigned: new Date().toISOString(),
@@ -96,19 +123,31 @@ export default function GradesPage() {
     toast({ title: "Nota Eliminada", description: "La nota ha sido eliminada.", variant: "destructive" });
   };
 
-  const openEditModal = (grade: LegacyGrade) => { // Updated type
+  const openEditModal = (grade: LegacyGrade) => {
     setEditingGrade(grade);
     setIsModalOpen(true);
   };
-  
+
   const openAddModal = () => {
     setEditingGrade(null);
     setIsModalOpen(true);
   };
 
   const filteredGrades = selectedStudentId ? grades.filter(g => g.studentId === selectedStudentId) : [];
-  const selectedStudentName = selectedStudentId ? getStudentById(selectedStudentId)?.firstName : 'el estudiante';
+  const selectedStudentDetails = selectedStudentId ? getStudentById(selectedStudentId) : null;
+  const selectedStudentName = selectedStudentDetails ? `${selectedStudentDetails.firstName} ${selectedStudentDetails.lastName}` : 'el estudiante';
 
+
+  if (!studentsLoaded || isLoadingGrades) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <GraduationCap className="h-16 w-16 animate-spin text-primary" />
+           <p className="ml-4 text-lg text-muted-foreground">Cargando datos de notas...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -166,10 +205,10 @@ export default function GradesPage() {
                         <TableCell>{grade.period}</TableCell>
                         <TableCell>{format(new Date(grade.dateAssigned), "dd/MM/yyyy", { locale: es })}</TableCell>
                         <TableCell className="text-right">
-                           <Button variant="ghost" size="icon" onClick={() => openEditModal(grade)} className="mr-2">
+                           <Button variant="ghost" size="icon" onClick={() => openEditModal(grade)} className="mr-2" title="Editar Nota">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteGrade(grade.id)} className="text-destructive hover:text-destructive">
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteGrade(grade.id)} className="text-destructive hover:text-destructive" title="Eliminar Nota">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                         </TableCell>
@@ -269,3 +308,4 @@ export default function GradesPage() {
     </DashboardLayout>
   );
 }
+

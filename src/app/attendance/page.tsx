@@ -15,19 +15,21 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, Camera, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import type { LegacyStudent, LegacyAttendanceRecord } from "@/types"; // Updated import
+import type { LegacyStudent, LegacyAttendanceRecord } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import QrCodeDisplay from "@/components/QrCodeDisplay";
 import QrScanner from "@/components/QrScanner";
 import { useStudentContext } from "@/contexts/StudentContext";
 
-type AttendanceStatus = LegacyAttendanceRecord["status"]; // Updated type
+type AttendanceStatus = LegacyAttendanceRecord["status"];
+
+const getAttendanceStorageKey = (date: Date) => `eduassist_attendance_${format(date, "yyyy-MM-dd")}`;
 
 interface QrScannerModalContentProps {
   selectedDate: Date;
   onAttendanceRecorded: (studentId: string, studentName: string) => void;
   onClose: () => void;
-  getStudentById: (studentId: string) => LegacyStudent | undefined; // Updated type
+  getStudentById: (studentId: string) => LegacyStudent | undefined;
 }
 
 const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedDate, onAttendanceRecorded, onClose, getStudentById }) => {
@@ -39,21 +41,23 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const resetScanner = () => {
+  const resetScanner = async () => {
     setScanResult(null);
     setError(null);
     setLastScannedData(null);
-    setHasCameraPermission(null); 
     setIsScanning(false); 
+    setHasCameraPermission(null); // Trigger permission request again
   };
-  
+
   useEffect(() => {
+    let streamInstance: MediaStream | null = null;
     const requestCameraPermission = async () => {
       if (typeof navigator !== "undefined" && navigator.mediaDevices) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          streamInstance = stream;
           setHasCameraPermission(true);
-          setIsScanning(true); 
+          setIsScanning(true);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
@@ -73,17 +77,20 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
       }
     };
 
-    if (hasCameraPermission === null) { 
+    if (isQrScannerModalOpen && hasCameraPermission === null) { // Only request if modal is open and permission not determined
         requestCameraPermission();
     }
     
     return () => { 
+      if (streamInstance) {
+        streamInstance.getTracks().forEach(track => track.stop());
+      }
       if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
       }
     };
-  }, [toast, hasCameraPermission]);
+  }, [toast, hasCameraPermission, isQrScannerModalOpen]); // Add isQrScannerModalOpen dependency
 
 
   const handleScanSuccess = (decodedText: string) => {
@@ -127,7 +134,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
     // console.warn(`QR Scan Failure: ${errorMessage}`);
   };
   
-  if (hasCameraPermission === null) {
+  if (hasCameraPermission === null && isQrScannerModalOpen) { // Show loader only if modal is open and checking permission
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -146,7 +153,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
         </AlertDescription>
       </Alert>
 
-      <video ref={videoRef} className={`w-full aspect-video rounded-md ${!isScanning || !hasCameraPermission ? 'hidden' : ''}`} autoPlay muted />
+      <video ref={videoRef} className={`w-full aspect-video rounded-md ${!isScanning || !hasCameraPermission ? 'hidden' : ''}`} autoPlay muted playsInline />
 
       {!hasCameraPermission && ( 
         <Alert variant="destructive">
@@ -164,7 +171,8 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
           <QrScanner
             onScanSuccess={handleScanSuccess}
             onScanFailure={handleScanFailure}
-            qrboxSize={250}
+            qrboxSize={200} 
+            fps={5}
           />
         </div>
       )}
@@ -208,24 +216,57 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
 
 
 export default function AttendancePage() {
-  const { students, getStudentById } = useStudentContext();
+  const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
   const { toast } = useToast();
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isQrScannerModalOpen, setIsQrScannerModalOpen] = useState(false);
-  const [selectedStudentForQr, setSelectedStudentForQr] = useState<Pick<LegacyStudent, "id" | "firstName" | "lastName"> | null>(null); // Updated type
+  const [selectedStudentForQr, setSelectedStudentForQr] = useState<Pick<LegacyStudent, "id" | "firstName" | "lastName"> | null>(null);
   const [qrValue, setQrValue] = useState("");
 
 
+  // Load and initialize attendance data
   useEffect(() => {
-    const initialData: Record<string, AttendanceStatus> = {};
-    students.forEach(student => {
-      initialData[student.id] = 'Presente'; 
-    });
-    setAttendanceData(initialData);
-  }, [students]); 
+    if (typeof window !== 'undefined' && selectedDate && studentsLoaded) {
+      setIsLoadingAttendance(true);
+      const storageKey = getAttendanceStorageKey(selectedDate);
+      const storedAttendance = localStorage.getItem(storageKey);
+      
+      if (storedAttendance) {
+        try {
+          setAttendanceData(JSON.parse(storedAttendance));
+        } catch (error) {
+          console.error("Error parsing attendance from localStorage:", error);
+          // Initialize if parsing fails
+          const initialData: Record<string, AttendanceStatus> = {};
+          students.forEach(student => {
+            initialData[student.id] = 'Presente';
+          });
+          setAttendanceData(initialData);
+        }
+      } else {
+        // Initialize if not found in storage
+        const initialData: Record<string, AttendanceStatus> = {};
+        students.forEach(student => {
+          initialData[student.id] = 'Presente';
+        });
+        setAttendanceData(initialData);
+      }
+      setIsLoadingAttendance(false);
+    }
+  }, [selectedDate, students, studentsLoaded]);
+
+  // Save attendance data to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && selectedDate && !isLoadingAttendance && Object.keys(attendanceData).length > 0) {
+      const storageKey = getAttendanceStorageKey(selectedDate);
+      localStorage.setItem(storageKey, JSON.stringify(attendanceData));
+    }
+  }, [attendanceData, selectedDate, isLoadingAttendance]);
+
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendanceData(prevData => ({
@@ -243,20 +284,15 @@ export default function AttendancePage() {
       });
       return;
     }
-    const savedRecords: LegacyAttendanceRecord[] = Object.entries(attendanceData).map(([studentId, status]) => ({ // Updated type
-      id: `${studentId}-${selectedDate.toISOString()}`, 
-      studentId,
-      date: selectedDate.toISOString(),
-      status,
-    }));
-    console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), savedRecords);
+    // Data is already saved by the useEffect hook, this is more for user feedback
+    console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), attendanceData);
     toast({
       title: "Asistencia Guardada",
       description: `Se ha guardado la asistencia para el ${format(selectedDate, "PPP", { locale: es })}.`,
     });
   };
 
-  const handleShowQr = (student: Pick<LegacyStudent, "id" | "firstName" | "lastName">) => { // Updated type
+  const handleShowQr = (student: Pick<LegacyStudent, "id" | "firstName" | "lastName">) => {
     setSelectedStudentForQr(student);
     const qrData = {
       type: "eduassist_student_id",
@@ -270,7 +306,17 @@ export default function AttendancePage() {
   const handleAttendanceRecordedByQr = (studentId: string, studentName: string) => {
     handleStatusChange(studentId, 'Presente');
   };
-
+  
+  if (!studentsLoaded || isLoadingAttendance) {
+     return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <CalendarCheck className="h-16 w-16 animate-spin text-primary" />
+           <p className="ml-4 text-lg text-muted-foreground">Cargando datos de asistencia...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -309,7 +355,7 @@ export default function AttendancePage() {
             </Popover>
              <Dialog open={isQrScannerModalOpen} onOpenChange={setIsQrScannerModalOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full md:w-auto" variant="outline" disabled={!selectedDate}>
+                <Button className="w-full md:w-auto" variant="outline" disabled={!selectedDate} onClick={() => setIsQrScannerModalOpen(true)}>
                   <ScanLine className="mr-2 h-5 w-5" />
                   Escanear Asistencia QR
                 </Button>
@@ -404,3 +450,4 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
+
