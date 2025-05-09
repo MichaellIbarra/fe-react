@@ -14,9 +14,7 @@ import {
   Sparkles,
   PanelLeft,
   School,
-  // ScanBarcode, // Removed ScanBarcode icon
 } from 'lucide-react';
-// Removed AppLogo import as it's not directly used for the sidebar logo here
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,31 +29,33 @@ import {
   useSidebar,
   SidebarTrigger,
 } from '@/components/ui/sidebar'; 
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import type { UserRole } from '@/types'; // Import UserRole
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
+  roles?: UserRole[]; // Roles that can see this item. If undefined, all roles can see.
 }
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/attendance', label: 'Asistencia', icon: CalendarCheck },
-  // { href: '/attendance/qr-scan', label: 'Asistencia QR', icon: ScanBarcode }, // Removed QR Scan link
   { href: '/grades', label: 'Notas', icon: GraduationCap },
   { href: '/reports', label: 'Informes', icon: FileText },
   { href: '/students', label: 'Estudiantes', icon: Users },
-  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles },
+  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'] }, // Only for superusers
 ];
 
 function MobileNavToggle() {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isMobile } = useSidebar();
+  if (!isMobile) return null;
   return (
     <Button
       variant="ghost"
       size="icon"
-      className="md:hidden"
+      className="md:hidden" // This button is primarily for mobile
       onClick={toggleSidebar}
       aria-label="Toggle Navigation"
     >
@@ -67,13 +67,24 @@ function MobileNavToggle() {
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { currentUser } = useAuth(); // Get currentUser from AuthContext
+
+  const accessibleNavItems = navItems.filter(item => {
+    if (!item.roles || item.roles.length === 0) {
+      return true; // Visible to all if no specific roles are defined
+    }
+    return currentUser && item.roles.includes(currentUser.role);
+  });
 
   return (
-    <SidebarProvider defaultOpen>
-      <div className="flex min-h-screen w-full">
-        <Sidebar collapsible="icon" className="border-r">
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-screen w-full flex-col md:flex-row"> {/* Ensure consistent flex direction */}
+        <Sidebar 
+          collapsible="icon" 
+          className="border-r bg-sidebar text-sidebar-foreground" // Apply sidebar theme directly
+          side="left" // Explicitly set side for clarity
+        >
           <SidebarHeader className="p-4 flex items-center justify-between">
-             {/* Updated logo color to use sidebar-foreground for visibility on emerald background */}
              <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                 <School className="h-7 w-7 text-sidebar-foreground" />
                 <span className="font-semibold text-xl text-sidebar-foreground">EduAssist</span>
@@ -84,7 +95,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </SidebarHeader>
           <SidebarContent className="p-2">
             <SidebarMenu>
-              {navItems.map((item) => (
+              {accessibleNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton
@@ -103,17 +114,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </SidebarContent>
         </Sidebar>
 
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 overflow-x-hidden"> {/* Prevent horizontal overflow */}
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
             <MobileNavToggle />
-            {/* Added SidebarTrigger for desktop toggle */}
             <SidebarTrigger className="hidden md:inline-flex" /> 
             <div className="flex-1">
               {/* Optional: Breadcrumbs or Page Title can go here */}
             </div>
             <UserNav />
           </header>
-          <SidebarInset>
+          <SidebarInset> {/* This handles the main content area styling and positioning */}
             <main className="flex-1 p-4 md:p-6 lg:p-8">
                 {children}
             </main>

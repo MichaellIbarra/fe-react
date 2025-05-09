@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,8 @@ import { Sparkles, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { dataAnomalyChecker, type DataAnomalyCheckerOutput } from "@/ai/flows/data-anomaly-checker";
+import { useAuth } from "@/contexts/AuthContext";
+// import { useRouter } from "next/navigation"; // For programmatic redirect
 
 const formSchema = z.object({
   studentName: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres." }).max(100),
@@ -24,6 +27,20 @@ export default function AnomalyCheckerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<DataAnomalyCheckerOutput | null>(null);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  // const router = useRouter();
+
+  // useEffect(() => {
+  //   // Example of protecting the page route-wise, though navigation hiding is the primary method here.
+  //   if (currentUser && currentUser.role !== 'superuser') {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Acceso Denegado",
+  //       description: "No tiene permisos para acceder a esta página.",
+  //     });
+  //     router.push('/dashboard'); // Redirect to dashboard
+  //   }
+  // }, [currentUser, router, toast]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,6 +71,24 @@ export default function AnomalyCheckerPage() {
       setIsLoading(false);
     }
   }
+  
+  // If user is not superuser, they shouldn't even see the link.
+  // If they somehow land here, we can show a message or redirect (handled by useEffect above if uncommented).
+  if (currentUser && currentUser.role !== 'superuser') {
+    return (
+      <DashboardLayout>
+        <Card>
+          <CardHeader>
+            <CardTitle>Acceso Denegado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>No tiene los permisos necesarios para ver esta página. Por favor, contacte al administrador.</p>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
 
   return (
     <DashboardLayout>
@@ -64,7 +99,7 @@ export default function AnomalyCheckerPage() {
             <div>
               <CardTitle className="text-2xl font-bold">Verificador de Anomalías IA</CardTitle>
               <CardDescription>
-                Detecte posibles desajustes entre nombres de estudiantes y sus DNI.
+                Detecte posibles desajustes entre nombres de estudiantes y sus DNI. (Función de Superusuario)
               </CardDescription>
             </div>
           </CardHeader>

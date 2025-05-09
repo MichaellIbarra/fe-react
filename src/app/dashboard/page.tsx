@@ -6,22 +6,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Activity, BarChart3, Users, CheckSquare } from "lucide-react";
-// import { format } from 'date-fns'; // No longer needed for QR link
+import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
+import type { UserRole } from "@/types"; // Import UserRole
+
+interface QuickAccessItemData {
+  title: string;
+  href: string;
+  icon: React.ElementType;
+  description: string;
+  roles?: UserRole[]; // Roles that can see this item
+}
+
+const allQuickAccessItems: QuickAccessItemData[] = [
+  { title: "Registrar Asistencia", href: "/attendance", icon: CheckSquare, description: "Marcar la asistencia diaria de los estudiantes y escanear QR." },
+  { title: "Ingresar Notas", href: "/grades", icon: BarChart3, description: "Añadir y gestionar calificaciones." },
+  { title: "Ver Estudiantes", href: "/students", icon: Users, description: "Consultar y administrar datos de estudiantes." },
+  { title: "Chequeo con IA", href: "/anomaly-checker", icon: Activity, description: "Detectar anomalías en datos de estudiantes.", roles: ['superuser'] },
+];
 
 const QuickAccessItems = () => {
-  // const todayDateString = format(new Date(), 'yyyy-MM-dd'); // No longer needed
+  const { currentUser } = useAuth();
 
-  const items = [
-    { title: "Registrar Asistencia", href: "/attendance", icon: CheckSquare, description: "Marcar la asistencia diaria de los estudiantes y escanear QR." },
-    // { title: "Asistencia por QR", href: `/attendance/qr-scan?date=${todayDateString}`, icon: ScanBarcode, description: "Escanear QR para registrar asistencia." }, // Removed
-    { title: "Ingresar Notas", href: "/grades", icon: BarChart3, description: "Añadir y gestionar calificaciones." },
-    { title: "Ver Estudiantes", href: "/students", icon: Users, description: "Consultar y administrar datos de estudiantes." },
-    { title: "Chequeo con IA", href: "/anomaly-checker", icon: Activity, description: "Detectar anomalías en datos de estudiantes." },
-  ];
+  const accessibleItems = allQuickAccessItems.filter(item => {
+    if (!item.roles || item.roles.length === 0) {
+      return true; 
+    }
+    return currentUser && item.roles.includes(currentUser.role);
+  });
 
   return (
-     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> {/* Adjusted grid for 4 items */}
-      {items.map((item) => (
+     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {accessibleItems.map((item) => (
         <Card key={item.title} className="shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-lg font-medium">{item.title}</CardTitle>
@@ -41,6 +56,7 @@ const QuickAccessItems = () => {
 
 
 export default function DashboardPage() {
+  const { currentUser } = useAuth();
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
@@ -48,7 +64,8 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-3xl font-bold text-primary">Panel Principal de EduAssist</CardTitle>
             <CardDescription className="text-lg">
-              Bienvenido al sistema de gestión académica. Aquí puede acceder a las funciones principales.
+              Bienvenido {currentUser?.name || 'Usuario'} al sistema de gestión académica.
+              Aquí puede acceder a las funciones principales. ({currentUser?.role === 'superuser' ? 'Modo Superusuario' : 'Modo Usuario'})
             </CardDescription>
           </CardHeader>
           <CardContent>

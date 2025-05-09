@@ -1,3 +1,13 @@
+export type UserRole = 'superuser' | 'normal';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatarSeed?: string; // Used for generating placeholder avatar
+}
+
 export interface Student {
   id: string; // Unique identifier
   dni: string; // DNI del estudiante
