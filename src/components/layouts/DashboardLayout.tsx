@@ -17,7 +17,8 @@ import {
   PanelLeft,
   School,
   Loader2,
-  MessageSquare, // Added icon for notifications
+  MessageSquare,
+  BarChart3, // Added BarChart3 for Reports
 } from 'lucide-react';
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ const navItems: NavItem[] = [
   { href: '/grades', label: 'Notas', icon: GraduationCap },
   { href: '/reports', label: 'Informes', icon: FileText },
   { href: '/students', label: 'Estudiantes', icon: Users },
-  { href: '/notifications', label: 'Notificaciones', icon: MessageSquare }, // New notification item
+  { href: '/notifications', label: 'Notificaciones', icon: MessageSquare }, 
   { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'] },
 ];
 
@@ -169,5 +170,4 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
 
