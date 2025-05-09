@@ -2,15 +2,8 @@
 "use client"
 
 import * as React from "react"
-import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, ResponsiveContainer, LabelList } from "recharts"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   ChartContainer,
   ChartTooltip,
@@ -54,54 +47,54 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function TodaysAttendanceChart({ data }: TodaysAttendanceChartProps) {
-  const totalStudents = React.useMemo(() => {
-    return data.reduce((acc, curr) => acc + curr.count, 0)
-  }, [data])
-
   if (!data || data.every(d => d.count === 0)) {
     return <p className="text-sm text-muted-foreground text-center py-4">No hay datos de asistencia para hoy.</p>;
   }
   
-  // Filter out data points with zero count to avoid rendering empty slices
   const filteredData = data.filter(item => item.count > 0);
-
 
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto flex aspect-square max-h-[300px] items-center justify-center"
+      className="min-h-[200px] w-full aspect-video"
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart 
+          data={filteredData} 
+          layout="vertical" 
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+          <XAxis type="number" allowDecimals={false} />
+          <YAxis 
+            dataKey="status" 
+            type="category" 
+            tickLine={false} 
+            axisLine={false}
+            stroke="hsl(var(--foreground))"
+            tickMargin={8}
+            width={80}
+          />
           <ChartTooltip
-            cursor={false}
+            cursor={{ fill: 'hsl(var(--muted))' }}
             content={<ChartTooltipContent hideLabel />}
           />
-          <Pie
-            data={filteredData}
-            dataKey="count"
-            nameKey="status"
-            innerRadius={60}
-            strokeWidth={5}
-            activeIndex={0} // Can be used for interactive highlighting
-            // activeShape, // For custom active shape
-          >
+          <ChartLegend content={<ChartLegendContent nameKey="status" />} />
+          <Bar dataKey="count" layout="vertical" radius={[0, 5, 5, 0]} barSize={35}>
             {filteredData.map((entry) => (
-              <Cell key={entry.status} fill={entry.fill} className="stroke-background hover:opacity-80" />
+              <Cell key={`cell-${entry.status}`} fill={entry.fill} />
             ))}
-          </Pie>
-           <ChartLegend
-            content={<ChartLegendContent nameKey="status" />}
-            className="-translate-y-2 flex-wrap gap-2 data-[legend=true]:flex"
-          />
-        </PieChart>
+             <LabelList 
+                dataKey="count" 
+                position="right" 
+                offset={8} 
+                className="fill-foreground" 
+                fontSize={12} 
+             />
+          </Bar>
+        </BarChart>
       </ResponsiveContainer>
-       {totalStudents > 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p className="text-2xl font-bold text-foreground">{totalStudents}</p>
-            <p className="text-xs text-muted-foreground">Estudiantes Hoy</p>
-          </div>
-        )}
     </ChartContainer>
   )
 }
+
