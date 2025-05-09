@@ -2,6 +2,7 @@
 // @ts-nocheck
 "use client";
 
+import * as React from 'react'; // Added import for React
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -32,13 +33,13 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'; 
 import { useAuth } from '@/contexts/AuthContext';
-import type { LegacyUserRole } from '@/types'; // Updated import
+import type { LegacyUserRole } from '@/types'; 
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles?: LegacyUserRole[]; // Updated type
+  roles?: LegacyUserRole[]; 
 }
 
 const navItems: NavItem[] = [
@@ -168,3 +169,4 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
