@@ -15,6 +15,7 @@ import {
 import { LogOut, Settings, User as UserIcon, ShieldCheck, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function UserNav() {
   const { currentUser, logout, isAuthLoading } = useAuth();
@@ -62,14 +63,22 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>Perfil</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Configuración</span>
-          </DropdownMenuItem>
+          <Link href="/profile" passHref legacyBehavior>
+            <DropdownMenuItem asChild>
+              <a>
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Perfil</span>
+              </a>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/settings" passHref legacyBehavior>
+            <DropdownMenuItem asChild>
+              <a>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Configuración</span>
+              </a>
+            </DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
