@@ -55,7 +55,7 @@ export default function GradeCountBySubjectChart({ data }: GradeCountBySubjectCh
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto flex aspect-square max-h-[300px] items-center justify-center"
+      className="mx-auto flex aspect-square max-h-[300px] items-center justify-center relative" // Added relative for absolute positioning of total
     >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -67,8 +67,9 @@ export default function GradeCountBySubjectChart({ data }: GradeCountBySubjectCh
             data={filteredData}
             dataKey="count"
             nameKey="subject"
-            innerRadius={60}
-            strokeWidth={5}
+            innerRadius="60%" // Adjusted for better visual balance
+            outerRadius="80%" // Adjusted
+            strokeWidth={2} // Reduced stroke width
           >
             {filteredData.map((entry) => (
               <Cell key={entry.subject} fill={entry.fill} className="stroke-background hover:opacity-80" />
@@ -81,7 +82,7 @@ export default function GradeCountBySubjectChart({ data }: GradeCountBySubjectCh
         </PieChart>
       </ResponsiveContainer>
        {totalGrades > 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
             <p className="text-2xl font-bold text-foreground">{totalGrades}</p>
             <p className="text-xs text-muted-foreground">Total Notas</p>
           </div>
@@ -89,3 +90,4 @@ export default function GradeCountBySubjectChart({ data }: GradeCountBySubjectCh
     </ChartContainer>
   )
 }
+
