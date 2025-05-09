@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn, School } from "lucide-react";
+import { Loader2, LogIn, School, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -111,6 +111,14 @@ export default function LoginPage() {
               Acceder
             </Button>
           </form>
+          <div className="mt-6 text-center">
+            <Link href="/register" legacyBehavior>
+              <a className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+                <UserPlus className="h-4 w-4" />
+                Crear nueva cuenta
+              </a>
+            </Link>
+          </div>
         </CardContent>
       </Card>
        <footer className="mt-8 text-center text-sm text-muted-foreground">
