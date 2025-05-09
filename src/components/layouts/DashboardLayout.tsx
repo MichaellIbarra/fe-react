@@ -18,9 +18,9 @@ import {
   Loader2,
   MessageSquare,
   Building2, 
-  Settings, // Added for Settings
-  UserCircle, // Added for Profile
-  Home, // Added for general Dashboard link
+  Settings,
+  UserCircle,
+  Home, 
 } from 'lucide-react';
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
@@ -45,18 +45,18 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   roles?: LegacyUserRole[];
-  requiresCampus?: boolean; // New property
+  requiresCampus?: boolean; 
 }
 
 const baseNavItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresCampus: false }, // Dashboard itself doesn't strictly require a campus to be selected initially
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresCampus: false },
   { href: '/attendance', label: 'Asistencia', icon: CalendarCheck, requiresCampus: true },
   { href: '/grades', label: 'Notas', icon: GraduationCap, requiresCampus: true },
   { href: '/reports', label: 'Informes', icon: FileText, requiresCampus: true },
   { href: '/students', label: 'Estudiantes', icon: Users, requiresCampus: true },
   { href: '/notifications', label: 'Notificaciones', icon: MessageSquare, requiresCampus: true },
   { href: '/campuses', label: 'Sedes', icon: Building2, roles: ['superuser'], requiresCampus: false },
-  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'], requiresCampus: false }, // Assuming this is global for superadmin
+  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'], requiresCampus: false }, 
 ];
 
 const profileAndSettingsNavItems: NavItem[] = [
@@ -135,7 +135,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
   
   const sidebarTitle = selectedCampus ? selectedCampus.name : "EduAssist";
-  const sidebarIcon = selectedCampus ? Building2 : School;
+  const SidebarIcon = selectedCampus ? Building2 : School;
 
 
   return (
@@ -148,11 +148,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         >
           <SidebarHeader className="p-4 flex items-center justify-between">
              <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden" aria-label={sidebarTitle}>
-                <sidebarIcon className="h-7 w-7 text-sidebar-foreground" />
+                <SidebarIcon className="h-7 w-7 text-sidebar-foreground" />
                 <span className="font-semibold text-xl text-sidebar-foreground truncate max-w-[150px]">{sidebarTitle}</span>
              </Link>
              <Link href="/dashboard" className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center hidden w-full py-1.5" aria-label={sidebarTitle}>
-                <sidebarIcon className="h-7 w-7 text-sidebar-foreground" />
+                <SidebarIcon className="h-7 w-7 text-sidebar-foreground" />
              </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
