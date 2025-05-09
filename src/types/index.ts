@@ -56,12 +56,26 @@ export interface LegacyProgressReport {
   };
 }
 
+export interface LegacyCampus {
+  id: string; // Unique identifier (auto-generated string)
+  name: string; // Corresponds to campus_name
+  code: string; // Corresponds to campus_code
+  address?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  status: 'A' | 'I'; // Active, Inactive, default 'A'
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+}
+
+
 // New types based on the provided SQL schema
 
 export type StatusEnum = 'A' | 'I'; // Active, Inactive
 export type DocumentTypeEnum = 'DNI' | 'PASSPORT' | 'OTHER';
 export type GenderEnum = 'M' | 'F' | 'O';
-export type TurnEnum = 'M' | 'T' | 'N'; // Mañana, Tarde, Noche
+export type TurnEnum = 'M' | 'T'; // Mañana, Tarde - Noche removed
 export type AttendanceStatusEnum = 'PRESENT' | 'MISSED' | 'LATE' | 'JUSTIFIED';
 
 
@@ -318,3 +332,4 @@ export interface CampusSetting {
   created_at?: string; // Or Date
   updated_at?: string; // Or Date
 }
+

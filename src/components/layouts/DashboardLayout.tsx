@@ -2,7 +2,7 @@
 // @ts-nocheck
 "use client";
 
-import * as React from 'react'; 
+import * as React from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -18,7 +18,7 @@ import {
   School,
   Loader2,
   MessageSquare,
-  BarChart3, // Added BarChart3 for Reports
+  Building2, // Added for Campuses
 } from 'lucide-react';
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
@@ -33,15 +33,15 @@ import {
   SidebarInset,
   useSidebar,
   SidebarTrigger,
-} from '@/components/ui/sidebar'; 
+} from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
-import type { LegacyUserRole } from '@/types'; 
+import type { LegacyUserRole } from '@/types';
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles?: LegacyUserRole[]; 
+  roles?: LegacyUserRole[];
 }
 
 const navItems: NavItem[] = [
@@ -50,13 +50,14 @@ const navItems: NavItem[] = [
   { href: '/grades', label: 'Notas', icon: GraduationCap },
   { href: '/reports', label: 'Informes', icon: FileText },
   { href: '/students', label: 'Estudiantes', icon: Users },
-  { href: '/notifications', label: 'Notificaciones', icon: MessageSquare }, 
+  { href: '/notifications', label: 'Notificaciones', icon: MessageSquare },
+  { href: '/campuses', label: 'Sedes', icon: Building2, roles: ['superuser'] }, // Added Campuses Link
   { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'] },
 ];
 
 function MobileNavToggle() {
-  const { setOpenMobile, isMobile } = useSidebar(); 
-  
+  const { setOpenMobile, isMobile } = useSidebar();
+
   const [hasMounted, setHasMounted] = React.useState(false);
   React.useEffect(() => {
     setHasMounted(true);
@@ -69,17 +70,17 @@ function MobileNavToggle() {
         </Button>
     );
   }
-  
+
   if (!isMobile) {
     return null;
   }
-  
+
   return (
     <Button
       variant="ghost"
       size="icon"
       className="md:hidden"
-      onClick={() => setOpenMobile(true)} 
+      onClick={() => setOpenMobile(true)}
       aria-label="Toggle Navigation"
     >
       <PanelLeft />
@@ -101,7 +102,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const accessibleNavItems = navItems.filter(item => {
     if (!item.roles || item.roles.length === 0) {
-      return true; 
+      return true;
     }
     return currentUser && item.roles.includes(currentUser.role);
   });
@@ -117,8 +118,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full flex-col bg-background md:flex-row">
-        <Sidebar 
-          collapsible="icon" 
+        <Sidebar
+          collapsible="icon"
           className="border-r bg-sidebar text-sidebar-foreground"
           side="left"
         >
@@ -155,7 +156,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-col flex-1 overflow-x-hidden">
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
             <MobileNavToggle />
-            <SidebarTrigger className="hidden md:inline-flex" /> 
+            <SidebarTrigger className="hidden md:inline-flex" />
             <div className="flex-1">
             </div>
             <UserNav />
@@ -170,4 +171,3 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
