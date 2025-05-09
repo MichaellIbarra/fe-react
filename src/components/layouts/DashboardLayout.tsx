@@ -2,7 +2,7 @@
 // @ts-nocheck
 "use client";
 
-import * as React from 'react'; // Added import for React
+import * as React from 'react'; 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -52,8 +52,8 @@ const navItems: NavItem[] = [
 ];
 
 function MobileNavToggle() {
-  const { setOpenMobile } = useSidebar();
-  // Check if component has mounted to avoid using useSidebar on server
+  const { setOpenMobile, isMobile } = useSidebar(); // Call useSidebar once and get all needed values
+  
   const [hasMounted, setHasMounted] = React.useState(false);
   React.useEffect(() => {
     setHasMounted(true);
@@ -61,6 +61,7 @@ function MobileNavToggle() {
 
   if (!hasMounted) {
     // Render a placeholder or null during SSR / before mount
+    // This ensures that client-specific `isMobile` isn't used for rendering decisions yet, preventing hydration mismatch
     return (
         <Button variant="ghost" size="icon" className="md:hidden" disabled aria-label="Toggle Navigation">
          <PanelLeft />
@@ -68,10 +69,10 @@ function MobileNavToggle() {
     );
   }
   
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const isMobile = useSidebar().isMobile; // Now safe to call
-
-  if (!isMobile) return null;
+  // Now that `hasMounted` is true, we can use `isMobile` (from the unconditional hook call)
+  if (!isMobile) {
+    return null;
+  }
   
   return (
     <Button
