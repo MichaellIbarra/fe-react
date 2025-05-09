@@ -11,15 +11,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon, Users, ShieldCheck, Loader2 } from "lucide-react";
+import { LogOut, Settings, User as UserIcon, ShieldCheck, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 export function UserNav() {
-  const { currentUser, switchUserProfile, availableUsers, logout, isAuthLoading } = useAuth();
+  const { currentUser, logout, isAuthLoading } = useAuth();
   const router = useRouter();
 
   if (isAuthLoading) {
@@ -31,10 +29,6 @@ export function UserNav() {
        <Button variant="outline" onClick={() => router.push('/login')}>Iniciar Sesión</Button>
     );
   }
-
-  const handleRoleChange = (userId: string) => {
-    switchUserProfile(userId);
-  };
 
   const handleLogout = () => {
     logout();
@@ -68,18 +62,6 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1.5">Cambiar Perfil (Demo)</DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={currentUser.id} onValueChange={handleRoleChange}>
-            {availableUsers.map(user => (
-              <DropdownMenuRadioItem key={user.id} value={user.id}>
-                 {user.role === 'superuser' ? <ShieldCheck className="mr-2 h-4 w-4" /> : <UserIcon className="mr-2 h-4 w-4" />}
-                {user.name} ({user.role === 'superuser' ? 'Super' : 'Normal'})
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
           <DropdownMenuItem disabled>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Perfil</span>
@@ -98,3 +80,4 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
+

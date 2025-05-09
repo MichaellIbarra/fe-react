@@ -3,8 +3,8 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
-import type { User, UserRole } from '@/types';
-import { useToast } from "@/hooks/use-toast"; // For login error feedback
+import type { User } from '@/types'; // UserRole is implicitly used via User
+import { useToast } from "@/hooks/use-toast"; 
 
 
 interface AuthContextType {
@@ -12,8 +12,7 @@ interface AuthContextType {
   isAuthLoading: boolean;
   login: (email: string, passwordAttempt: string) => Promise<boolean>;
   logout: () => void;
-  switchUserProfile: (userId: string) => void; // For demo profile switching in UserNav
-  availableUsers: User[];
+  // Removed: switchUserProfile and availableUsers
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,7 +25,7 @@ const defaultUsers: User[] = [
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUserInternal] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const { toast } = useToast();
+  const { toast } = useToast(); // Retain for potential future use or login messages
 
 
   useEffect(() => {
@@ -38,16 +37,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCurrentUserInternal(JSON.parse(storedUser));
         } catch (e) {
           console.error("Failed to parse stored user:", e);
-          localStorage.removeItem('currentUser'); // Clear invalid stored user
+          localStorage.removeItem('currentUser'); 
         }
       }
-      setIsAuthLoading(false); // Done loading
+      setIsAuthLoading(false); 
     }
   }, []);
 
   useEffect(() => {
     // Persist currentUser to localStorage whenever it changes
-    if (typeof window !== 'undefined' && !isAuthLoading) { // Only save after initial load determined
+    if (typeof window !== 'undefined' && !isAuthLoading) { 
       if (currentUser) {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
       } else {
@@ -57,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [currentUser, isAuthLoading]);
 
   const login = async (email: string, passwordAttempt: string): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 300)); 
     const userToLogin = defaultUsers.find(
       u => u.email.toLowerCase() === email.toLowerCase() && u.passwordHint === passwordAttempt
     );
@@ -65,26 +64,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCurrentUserInternal(userToLogin);
       return true;
     }
-    // Toast for login failure is handled in LoginPage
     return false;
   };
 
   const logout = () => {
     setCurrentUserInternal(null);
-    // localStorage removal is handled by the useEffect for currentUser when it becomes null
   };
 
-  const switchUserProfile = (userId: string) => {
-    const userToSwitchTo = defaultUsers.find(u => u.id === userId);
-    if (userToSwitchTo) {
-      setCurrentUserInternal(userToSwitchTo);
-    } else {
-        toast({ variant: "destructive", title: "Error", description: "Perfil no encontrado."});
-    }
-  };
-
+  // switchUserProfile and availableUsers are removed from the context value
   return (
-    <AuthContext.Provider value={{ currentUser, isAuthLoading, login, logout, switchUserProfile, availableUsers: defaultUsers }}>
+    <AuthContext.Provider value={{ currentUser, isAuthLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -97,3 +86,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
