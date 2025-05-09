@@ -5,22 +5,23 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Activity, BarChart3, Users, CheckSquare } from "lucide-react";
+import { Activity, BarChart3, Users, CheckSquare, MessageSquare } from "lucide-react"; // Added MessageSquare
 import { useAuth } from "@/contexts/AuthContext"; 
-import type { LegacyUserRole } from "@/types"; // Updated import
+import type { LegacyUserRole } from "@/types";
 
 interface QuickAccessItemData {
   title: string;
   href: string;
   icon: React.ElementType;
   description: string;
-  roles?: LegacyUserRole[]; // Updated type
+  roles?: LegacyUserRole[];
 }
 
 const allQuickAccessItems: QuickAccessItemData[] = [
   { title: "Registrar Asistencia", href: "/attendance", icon: CheckSquare, description: "Marcar la asistencia diaria de los estudiantes y escanear QR." },
   { title: "Ingresar Notas", href: "/grades", icon: BarChart3, description: "Añadir y gestionar calificaciones." },
   { title: "Ver Estudiantes", href: "/students", icon: Users, description: "Consultar y administrar datos de estudiantes." },
+  { title: "Enviar Notificaciones", href: "/notifications", icon: MessageSquare, description: "Comunicarse con los apoderados." },
   { title: "Chequeo con IA", href: "/anomaly-checker", icon: Activity, description: "Detectar anomalías en datos de estudiantes.", roles: ['superuser'] },
 ];
 
@@ -78,3 +79,4 @@ export default function DashboardPage() {
     </DashboardLayout>
   );
 }
+

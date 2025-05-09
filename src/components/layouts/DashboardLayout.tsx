@@ -17,6 +17,7 @@ import {
   PanelLeft,
   School,
   Loader2,
+  MessageSquare, // Added icon for notifications
 } from 'lucide-react';
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
@@ -48,11 +49,12 @@ const navItems: NavItem[] = [
   { href: '/grades', label: 'Notas', icon: GraduationCap },
   { href: '/reports', label: 'Informes', icon: FileText },
   { href: '/students', label: 'Estudiantes', icon: Users },
+  { href: '/notifications', label: 'Notificaciones', icon: MessageSquare }, // New notification item
   { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'] },
 ];
 
 function MobileNavToggle() {
-  const { setOpenMobile, isMobile } = useSidebar(); // Call useSidebar once and get all needed values
+  const { setOpenMobile, isMobile } = useSidebar(); 
   
   const [hasMounted, setHasMounted] = React.useState(false);
   React.useEffect(() => {
@@ -60,8 +62,6 @@ function MobileNavToggle() {
   }, []);
 
   if (!hasMounted) {
-    // Render a placeholder or null during SSR / before mount
-    // This ensures that client-specific `isMobile` isn't used for rendering decisions yet, preventing hydration mismatch
     return (
         <Button variant="ghost" size="icon" className="md:hidden" disabled aria-label="Toggle Navigation">
          <PanelLeft />
@@ -69,7 +69,6 @@ function MobileNavToggle() {
     );
   }
   
-  // Now that `hasMounted` is true, we can use `isMobile` (from the unconditional hook call)
   if (!isMobile) {
     return null;
   }
@@ -170,4 +169,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
 
