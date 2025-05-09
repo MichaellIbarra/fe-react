@@ -6,6 +6,7 @@ export interface User {
   email: string;
   role: UserRole;
   avatarSeed?: string; // Used for generating placeholder avatar
+  passwordHint: string; // For demo login, e.g. 'super1' or 'normal1'
 }
 
 export interface Student {

@@ -4,7 +4,8 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   PanelLeft,
   School,
+  Loader2,
 } from 'lucide-react';
 import { UserNav } from '@/components/UserNav';
 import { Button } from '@/components/ui/button';
@@ -29,14 +31,14 @@ import {
   useSidebar,
   SidebarTrigger,
 } from '@/components/ui/sidebar'; 
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import type { UserRole } from '@/types'; // Import UserRole
+import { useAuth } from '@/contexts/AuthContext';
+import type { UserRole } from '@/types';
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles?: UserRole[]; // Roles that can see this item. If undefined, all roles can see.
+  roles?: UserRole[]; 
 }
 
 const navItems: NavItem[] = [
@@ -45,18 +47,18 @@ const navItems: NavItem[] = [
   { href: '/grades', label: 'Notas', icon: GraduationCap },
   { href: '/reports', label: 'Informes', icon: FileText },
   { href: '/students', label: 'Estudiantes', icon: Users },
-  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'] }, // Only for superusers
+  { href: '/anomaly-checker', label: 'Verificador IA', icon: Sparkles, roles: ['superuser'] },
 ];
 
 function MobileNavToggle() {
-  const { toggleSidebar, isMobile } = useSidebar();
+  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar();
   if (!isMobile) return null;
   return (
     <Button
       variant="ghost"
       size="icon"
-      className="md:hidden" // This button is primarily for mobile
-      onClick={toggleSidebar}
+      className="md:hidden"
+      onClick={() => setOpenMobile(true)} // Directly open mobile sheet
       aria-label="Toggle Navigation"
     >
       <PanelLeft />
@@ -67,22 +69,37 @@ function MobileNavToggle() {
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { currentUser } = useAuth(); // Get currentUser from AuthContext
+  const { currentUser, isAuthLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, isAuthLoading, router]);
 
   const accessibleNavItems = navItems.filter(item => {
     if (!item.roles || item.roles.length === 0) {
-      return true; // Visible to all if no specific roles are defined
+      return true; 
     }
     return currentUser && item.roles.includes(currentUser.role);
   });
 
+  if (isAuthLoading || (!isAuthLoading && !currentUser)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full flex-col md:flex-row"> {/* Ensure consistent flex direction */}
+      <div className="flex min-h-screen w-full flex-col bg-background md:flex-row">
         <Sidebar 
           collapsible="icon" 
-          className="border-r bg-sidebar text-sidebar-foreground" // Apply sidebar theme directly
-          side="left" // Explicitly set side for clarity
+          className="border-r bg-sidebar text-sidebar-foreground"
+          side="left"
         >
           <SidebarHeader className="p-4 flex items-center justify-between">
              <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
@@ -114,7 +131,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </SidebarContent>
         </Sidebar>
 
-        <div className="flex flex-col flex-1 overflow-x-hidden"> {/* Prevent horizontal overflow */}
+        <div className="flex flex-col flex-1 overflow-x-hidden">
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
             <MobileNavToggle />
             <SidebarTrigger className="hidden md:inline-flex" /> 
@@ -123,7 +140,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
             <UserNav />
           </header>
-          <SidebarInset> {/* This handles the main content area styling and positioning */}
+          <SidebarInset>
             <main className="flex-1 p-4 md:p-6 lg:p-8">
                 {children}
             </main>

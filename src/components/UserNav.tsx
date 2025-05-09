@@ -14,21 +14,31 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon, Users, ShieldCheck } from "lucide-react";
+import { LogOut, Settings, User as UserIcon, Users, ShieldCheck, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import type { UserRole } from "@/types";
+import { useRouter } from "next/navigation";
 
 export function UserNav() {
-  const { currentUser, availableUsers, loginAs } = useAuth();
+  const { currentUser, switchUserProfile, availableUsers, logout, isAuthLoading } = useAuth();
+  const router = useRouter();
+
+  if (isAuthLoading) {
+    return <Button variant="ghost" className="relative h-10 w-10 rounded-full"><Loader2 className="h-5 w-5 animate-spin" /></Button>;
+  }
 
   if (!currentUser) {
     return (
-       <Button variant="outline" onClick={() => loginAs(availableUsers[0].id)}>Iniciar Sesión</Button>
+       <Button variant="outline" onClick={() => router.push('/login')}>Iniciar Sesión</Button>
     );
   }
 
   const handleRoleChange = (userId: string) => {
-    loginAs(userId);
+    switchUserProfile(userId);
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
   };
 
   return (
@@ -70,17 +80,17 @@ export function UserNav() {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem disabled>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Perfil</span>
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem disabled>
             <Settings className="mr-2 h-4 w-4" />
             <span>Configuración</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => alert("Cierre de sesión no implementado.")}>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Cerrar Sesión</span>
         </DropdownMenuItem>
