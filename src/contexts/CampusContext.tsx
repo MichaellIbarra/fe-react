@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { LegacyCampus } from '@/types';
+import { hexToHsl } from '@/lib/utils';
 
 interface CampusContextType {
   campuses: LegacyCampus[];
@@ -13,7 +14,7 @@ interface CampusContextType {
   deleteCampus: (campusId: string) => void;
   getCampusById: (campusId: string) => LegacyCampus | undefined;
   isLoaded: boolean;
-  isLoadingSelection: boolean; // To track if selected campus is being loaded
+  isLoadingSelection: boolean; 
 }
 
 const CampusContext = createContext<CampusContextType | undefined>(undefined);
@@ -32,7 +33,9 @@ const initialCampusesData: LegacyCampus[] = [
     contactPhone: "987654321", 
     status: 'A', 
     createdAt: new Date().toISOString(), 
-    updatedAt: new Date().toISOString() 
+    updatedAt: new Date().toISOString(),
+    institutionColor: "#3498db", // Default blue
+    educationalLevelSelection: "Primaria y Secundaria",
   },
    { 
     id: "campus-2", 
@@ -44,17 +47,33 @@ const initialCampusesData: LegacyCampus[] = [
     contactPhone: "912345678", 
     status: 'A', 
     createdAt: new Date().toISOString(), 
-    updatedAt: new Date().toISOString() 
+    updatedAt: new Date().toISOString(),
+    institutionColor: "#e74c3c", // A red color
+    educationalLevelSelection: "Primaria",
   },
 ];
+
+// Default theme colors (HSL components)
+const DEFAULT_PRIMARY_H = 207;
+const DEFAULT_PRIMARY_S = 70;
+const DEFAULT_PRIMARY_L = 53;
+
+const DEFAULT_PRIMARY_FG_H = 210;
+const DEFAULT_PRIMARY_FG_S = 40;
+const DEFAULT_PRIMARY_FG_L = 98;
+
+// For dark text on light primary background
+const DARK_TEXT_H = 210;
+const DARK_TEXT_S = 20;
+const DARK_TEXT_L = 20;
+
 
 export const CampusProvider = ({ children }: { children: ReactNode }) => {
   const [campuses, setCampuses] = useState<LegacyCampus[]>(initialCampusesData);
   const [selectedCampus, setSelectedCampusState] = useState<LegacyCampus | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false); // For campus list
-  const [isLoadingSelection, setIsLoadingSelection] = useState(true); // For selected campus
+  const [isLoaded, setIsLoaded] = useState(false); 
+  const [isLoadingSelection, setIsLoadingSelection] = useState(true); 
 
-  // Load all campuses
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -80,9 +99,8 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Load selected campus
   useEffect(() => {
-    if (typeof window !== 'undefined' && isLoaded) { // Ensure campuses are loaded first
+    if (typeof window !== 'undefined' && isLoaded) { 
       const storedSelectedCampusId = localStorage.getItem(SELECTED_CAMPUS_ID_KEY);
       if (storedSelectedCampusId) {
         const campus = campuses.find(c => c.id === storedSelectedCampusId);
@@ -90,9 +108,8 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
       }
       setIsLoadingSelection(false);
     }
-  }, [isLoaded, campuses]); // Depend on isLoaded and campuses array
+  }, [isLoaded, campuses]); 
 
-  // Persist all campuses
   useEffect(() => {
     if (isLoaded && typeof window !== 'undefined') {
       localStorage.setItem(CAMPUSES_STORAGE_KEY, JSON.stringify(campuses));
@@ -110,11 +127,54 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Effect to update CSS variables for theming
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const rootStyle = document.documentElement.style;
+      if (selectedCampus && selectedCampus.institutionColor) {
+        const hslColor = hexToHsl(selectedCampus.institutionColor);
+        if (hslColor) {
+          rootStyle.setProperty('--dynamic-primary-h', hslColor.h.toString());
+          rootStyle.setProperty('--dynamic-primary-s', hslColor.s.toString() + '%');
+          rootStyle.setProperty('--dynamic-primary-l', hslColor.l.toString() + '%');
+
+          // Determine foreground color based on primary lightness
+          if (hslColor.l > 60) { // If primary is light, use dark text
+            rootStyle.setProperty('--dynamic-primary-foreground-h', DARK_TEXT_H.toString());
+            rootStyle.setProperty('--dynamic-primary-foreground-s', DARK_TEXT_S.toString() + '%');
+            rootStyle.setProperty('--dynamic-primary-foreground-l', DARK_TEXT_L.toString() + '%');
+          } else { // If primary is dark, use light text
+            rootStyle.setProperty('--dynamic-primary-foreground-h', DEFAULT_PRIMARY_FG_H.toString());
+            rootStyle.setProperty('--dynamic-primary-foreground-s', DEFAULT_PRIMARY_FG_S.toString() + '%');
+            rootStyle.setProperty('--dynamic-primary-foreground-l', DEFAULT_PRIMARY_FG_L.toString() + '%');
+          }
+        } else {
+          // Fallback if hexToHsl returns null (invalid color)
+          rootStyle.removeProperty('--dynamic-primary-h');
+          rootStyle.removeProperty('--dynamic-primary-s');
+          rootStyle.removeProperty('--dynamic-primary-l');
+          rootStyle.removeProperty('--dynamic-primary-foreground-h');
+          rootStyle.removeProperty('--dynamic-primary-foreground-s');
+          rootStyle.removeProperty('--dynamic-primary-foreground-l');
+        }
+      } else {
+        // No campus selected or no institutionColor, revert to defaults by removing dynamic properties
+        rootStyle.removeProperty('--dynamic-primary-h');
+        rootStyle.removeProperty('--dynamic-primary-s');
+        rootStyle.removeProperty('--dynamic-primary-l');
+        rootStyle.removeProperty('--dynamic-primary-foreground-h');
+        rootStyle.removeProperty('--dynamic-primary-foreground-s');
+        rootStyle.removeProperty('--dynamic-primary-foreground-l');
+      }
+    }
+  }, [selectedCampus]);
+
 
   const addCampus = (campusData: Omit<LegacyCampus, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
     const now = new Date().toISOString();
     const newCampus: LegacyCampus = {
       ...campusData,
+      institutionColor: campusData.institutionColor || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`, // Ensure color exists
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       status: 'A',
       createdAt: now,
@@ -126,7 +186,7 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
   const updateCampus = (updatedCampusData: LegacyCampus) => {
     setCampuses(prevCampuses =>
       prevCampuses.map(c =>
-        c.id === updatedCampusData.id ? { ...updatedCampusData, updatedAt: new Date().toISOString() } : c
+        c.id === updatedCampusData.id ? { ...updatedCampusData, institutionColor: updatedCampusData.institutionColor || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`, updatedAt: new Date().toISOString() } : c
       )
     );
   };
@@ -135,7 +195,7 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
     setCampuses(prevCampuses => {
       const newCampuses = prevCampuses.filter(c => c.id !== campusId);
       if (selectedCampus?.id === campusId) {
-        setSelectedCampus(null); // Clear selection if deleted campus was selected
+        setSelectedCampus(null); 
       }
       return newCampuses;
     });
@@ -169,4 +229,3 @@ export const useCampusContext = () => {
   }
   return context;
 };
-
