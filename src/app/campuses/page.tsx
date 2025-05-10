@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Building2, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Loader2, Palette, Users, Briefcase, UploadCloud, LockKeyhole, GraduationCap, Image as ImageIcon, UserSquare } from "lucide-react";
+import { Building2, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Loader2, Palette, Users, Briefcase, UploadCloud, LockKeyhole, GraduationCap, Image as ImageIcon, UserSquare, X } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,13 +35,12 @@ const fileSchema = z.preprocess(
           reader.readAsDataURL(file);
         });
       }
-      // If it's already a string (data URI from previous edit), or undefined/empty string, keep it.
       if (typeof value === 'string' || value === undefined || value === null || value === '') {
         return value;
       }
-      return undefined; // Fallback for unexpected types
+      return undefined; 
     },
-    z.string().optional().or(z.literal('')) // Allow empty string for clearing the image
+    z.string().optional().or(z.literal('')) 
 );
 
 
@@ -75,13 +74,16 @@ export default function CampusesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
+  const [institutionLogoPreview, setInstitutionLogoPreview] = useState<string | null>(null);
+  const [directorPhotoPreview, setDirectorPhotoPreview] = useState<string | null>(null);
+
   const form = useForm<CampusFormData>({
     resolver: zodResolver(campusSchema),
     defaultValues: {
       name: "",
       code: "",
       institutionLogo: "",
-      institutionColor: "#3498db", // Default color
+      institutionColor: "#3498db",
       educationalLevelSelection: "",
       directorPhoto: "",
       directorFirstName: "",
@@ -110,49 +112,43 @@ export default function CampusesPage() {
         form.reset({
             name: editingCampus.name,
             code: editingCampus.code,
-            institutionLogo: editingCampus.institutionLogo || "", // This will be a data URI if exists
+            institutionLogo: editingCampus.institutionLogo || "",
             institutionColor: editingCampus.institutionColor || "#3498db",
             educationalLevelSelection: editingCampus.educationalLevelSelection || "",
-            directorPhoto: editingCampus.directorPhoto || "", // This will be a data URI if exists
+            directorPhoto: editingCampus.directorPhoto || "",
             directorFirstName: editingCampus.directorFirstName || "",
             directorLastName: editingCampus.directorLastName || "",
             directorDocumentNumber: editingCampus.directorDocumentNumber || "",
             directorPhoneNumber: editingCampus.directorPhoneNumber || "",
             directorEmail: editingCampus.directorEmail || "",
-            directorPassword: "", // Password should not be pre-filled for editing
+            directorPassword: "", 
         });
-      } else if (!viewingCampus) {
-        form.reset({ // Reset to default for new campus
-          name: "",
-          code: "",
-          institutionLogo: "",
-          institutionColor: "#3498db",
-          educationalLevelSelection: "",
-          directorPhoto: "",
-          directorFirstName: "",
-          directorLastName: "",
-          directorDocumentNumber: "",
-          directorPhoneNumber: "",
-          directorEmail: "",
-          directorPassword: "",
+        setInstitutionLogoPreview(null); 
+        setDirectorPhotoPreview(null);   
+      } else if (!viewingCampus) { 
+        form.reset({ 
+          name: "", code: "", institutionLogo: "", institutionColor: "#3498db",
+          educationalLevelSelection: "", directorPhoto: "", directorFirstName: "",
+          directorLastName: "", directorDocumentNumber: "", directorPhoneNumber: "",
+          directorEmail: "", directorPassword: "",
         });
+        setInstitutionLogoPreview(null);
+        setDirectorPhotoPreview(null);
       }
+    } else { // When modal is closed, also clear previews
+        setInstitutionLogoPreview(null);
+        setDirectorPhotoPreview(null);
     }
   }, [editingCampus, viewingCampus, form, isModalOpen]);
 
   const onSubmit = async (data: CampusFormData) => {
-    // The 'data' object here will have institutionLogo and directorPhoto as resolved data URIs
-    // or empty strings.
     const processedData = { ...data };
-
-    // Handle file inputs that might be promises
-    if (data.institutionLogo instanceof Promise) {
-      processedData.institutionLogo = await data.institutionLogo;
-    }
-    if (data.directorPhoto instanceof Promise) {
-      processedData.directorPhoto = await data.directorPhoto;
-    }
     
+    // If password is empty during edit, don't update it (keep existing password)
+    if (editingCampus && !processedData.directorPassword) {
+        delete processedData.directorPassword;
+    }
+
     if (editingCampus) {
       updateCampus({ ...editingCampus, ...processedData });
       toast({ title: "Sede Actualizada", description: "Los datos de la sede han sido actualizados." });
@@ -309,6 +305,8 @@ export default function CampusesPage() {
             setEditingCampus(null);
             setViewingCampus(null);
             form.reset();
+            setInstitutionLogoPreview(null);
+            setDirectorPhotoPreview(null);
           }
       }}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
@@ -336,7 +334,7 @@ export default function CampusesPage() {
                     {viewingCampus.institutionLogo && typeof viewingCampus.institutionLogo === 'string' && viewingCampus.institutionLogo.startsWith('data:image') ? (
                        <Image src={viewingCampus.institutionLogo} alt="Logo Institucional" width={100} height={100} className="rounded-md border object-contain mt-1" data-ai-hint="institution logo"/>
                     ) : (
-                      <p className="text-sm">{viewingCampus.institutionLogo || "N/A"}</p>
+                      <p className="text-sm text-muted-foreground italic">No asignado</p>
                     )}
                   </div>
                   <div><Label>Color Paleta:</Label>
@@ -356,7 +354,7 @@ export default function CampusesPage() {
                       {viewingCampus.directorPhoto && typeof viewingCampus.directorPhoto === 'string' && viewingCampus.directorPhoto.startsWith('data:image') ? (
                         <Image src={viewingCampus.directorPhoto} alt="Foto del Director" width={100} height={100} className="rounded-md border object-contain mt-1" data-ai-hint="director photo"/>
                       ) : (
-                        <p className="text-sm">{viewingCampus.directorPhoto || "N/A"}</p>
+                        <p className="text-sm text-muted-foreground italic">No asignada</p>
                       )}
                     </div>
                     <div><Label>Nombres:</Label><p className="text-sm">{viewingCampus.directorFirstName || "N/A"}</p></div>
@@ -372,7 +370,6 @@ export default function CampusesPage() {
             </div>
           ) : (
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
-              {/* Institucion Details */}
               <section className="space-y-4 p-4 border rounded-md shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
                     <Building2 className="h-6 w-6 text-primary" />
@@ -380,22 +377,19 @@ export default function CampusesPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <div>
-                    <Label htmlFor="institutionLogo">Logo Institucional</Label>
-                    <Controller
-                        name="institutionLogo"
-                        control={form.control}
-                        render={({ field: { onChange, value, ...restField } }) => (
-                          <Input 
-                            id="institutionLogo" 
-                            type="file" 
-                            onChange={(e) => onChange(e.target.files)} // Pass FileList to Zod preprocess
-                            className={cn(form.formState.errors.institutionLogo && "border-destructive")} 
-                            accept="image/*"
-                            {...restField} // Pass other field props like onBlur, ref
-                          />
-                        )}
-                      />
-                    {form.formState.errors.institutionLogo && <p className="text-destructive text-sm mt-1">{form.formState.errors.institutionLogo.message}</p>}
+                    <Label htmlFor="institutionLogoFile">Logo Institucional</Label>
+                    {(institutionLogoPreview || (form.getValues("institutionLogo") && typeof form.getValues("institutionLogo") === 'string' && (form.getValues("institutionLogo") as string).startsWith('data:image'))) && (
+                        <div className="mt-2 mb-2 space-y-1">
+                        <Image src={institutionLogoPreview || form.getValues("institutionLogo") as string} alt="Previsualización del logo" width={80} height={80} className="rounded-md border object-contain" data-ai-hint="logo preview"/>
+                        <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive-hover" onClick={() => { form.setValue("institutionLogo", "", { shouldValidate: true }); setInstitutionLogoPreview(null); const el = document.getElementById("institutionLogoFile") as HTMLInputElement; if(el) el.value = ""; }}>
+                            <X className="mr-1 h-3 w-3"/> Quitar Logo
+                        </Button>
+                        </div>
+                    )}
+                    <Controller name="institutionLogo" control={form.control} render={({ field: { onChange, value, ...restField } }) => ( // value here is what RHF holds
+                        <Input id="institutionLogoFile" type="file" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => { setInstitutionLogoPreview(reader.result as string); onChange(e.target.files); }; reader.readAsDataURL(file); } else { onChange(e.target.files); if (!form.getValues("institutionLogo")) setInstitutionLogoPreview(null); }}} className={cn(form.formState.errors.institutionLogo && "border-destructive")} accept="image/*" {...restField} />
+                    )}/>
+                    {form.formState.errors.institutionLogo && <p className="text-destructive text-sm mt-1">{form.formState.errors.institutionLogo.message as string}</p>}
                   </div>
                   <div>
                     <Label htmlFor="name">Nombre de la Institución</Label>
@@ -417,28 +411,17 @@ export default function CampusesPage() {
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="educationalLevelSelection">Niveles Educativos Ofrecidos</Label>
-                    <Controller
-                        control={form.control}
-                        name="educationalLevelSelection"
-                        render={({ field }) => (
+                    <Controller control={form.control} name="educationalLevelSelection" render={({ field }) => (
                         <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
-                            <SelectTrigger className={cn(form.formState.errors.educationalLevelSelection && "border-destructive")}>
-                            <SelectValue placeholder="Seleccionar niveles" />
-                            </SelectTrigger>
-                            <SelectContent>
-                            {educationalLevelOptions.map(level => (
-                                <SelectItem key={level} value={level}>{level}</SelectItem>
-                            ))}
-                            </SelectContent>
+                            <SelectTrigger className={cn(form.formState.errors.educationalLevelSelection && "border-destructive")}> <SelectValue placeholder="Seleccionar niveles" /> </SelectTrigger>
+                            <SelectContent> {educationalLevelOptions.map(level => (<SelectItem key={level} value={level}>{level}</SelectItem>))} </SelectContent>
                         </Select>
-                        )}
-                    />
+                    )}/>
                     {form.formState.errors.educationalLevelSelection && <p className="text-destructive text-sm mt-1">{form.formState.errors.educationalLevelSelection.message}</p>}
                   </div>
                 </div>
               </section>
 
-              {/* Director Details */}
               <section className="space-y-4 p-4 border rounded-md shadow-sm">
                  <div className="flex items-center gap-2 mb-4">
                     <Users className="h-6 w-6 text-primary" />
@@ -446,22 +429,19 @@ export default function CampusesPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <div>
-                    <Label htmlFor="directorPhoto">Foto del Director</Label>
-                     <Controller
-                        name="directorPhoto"
-                        control={form.control}
-                        render={({ field: { onChange, value, ...restField } }) => (
-                          <Input 
-                            id="directorPhoto" 
-                            type="file" 
-                            onChange={(e) => onChange(e.target.files)} 
-                            className={cn(form.formState.errors.directorPhoto && "border-destructive")} 
-                            accept="image/*"
-                            {...restField}
-                          />
-                        )}
-                      />
-                    {form.formState.errors.directorPhoto && <p className="text-destructive text-sm mt-1">{form.formState.errors.directorPhoto.message}</p>}
+                    <Label htmlFor="directorPhotoFile">Foto del Director</Label>
+                     {(directorPhotoPreview || (form.getValues("directorPhoto") && typeof form.getValues("directorPhoto") === 'string' && (form.getValues("directorPhoto") as string).startsWith('data:image'))) && (
+                        <div className="mt-2 mb-2 space-y-1">
+                        <Image src={directorPhotoPreview || form.getValues("directorPhoto") as string} alt="Previsualización foto director" width={80} height={80} className="rounded-md border object-contain" data-ai-hint="director preview"/>
+                        <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive-hover" onClick={() => { form.setValue("directorPhoto", "", { shouldValidate: true }); setDirectorPhotoPreview(null); const el = document.getElementById("directorPhotoFile") as HTMLInputElement; if(el) el.value = ""; }}>
+                            <X className="mr-1 h-3 w-3"/> Quitar Foto
+                        </Button>
+                        </div>
+                    )}
+                     <Controller name="directorPhoto" control={form.control} render={({ field: { onChange, value, ...restField } }) => (
+                          <Input id="directorPhotoFile" type="file" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => { setDirectorPhotoPreview(reader.result as string); onChange(e.target.files); }; reader.readAsDataURL(file); } else { onChange(e.target.files); if(!form.getValues("directorPhoto")) setDirectorPhotoPreview(null); }}} className={cn(form.formState.errors.directorPhoto && "border-destructive")} accept="image/*" {...restField}/>
+                      )}/>
+                    {form.formState.errors.directorPhoto && <p className="text-destructive text-sm mt-1">{form.formState.errors.directorPhoto.message as string}</p>}
                   </div>
                   <div>
                     <Label htmlFor="directorFirstName">Nombres del Director</Label>
@@ -490,7 +470,7 @@ export default function CampusesPage() {
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="directorPassword">Contraseña (para el Director)</Label>
-                    <Input id="directorPassword" type="password" {...form.register("directorPassword")} placeholder="••••••••" className={cn(form.formState.errors.directorPassword && "border-destructive")} />
+                    <Input id="directorPassword" type="password" {...form.register("directorPassword")} placeholder={editingCampus ? "Dejar en blanco para no cambiar" : "••••••••"} className={cn(form.formState.errors.directorPassword && "border-destructive")} />
                     {form.formState.errors.directorPassword && <p className="text-destructive text-sm mt-1">{form.formState.errors.directorPassword.message}</p>}
                     <p className="text-xs text-muted-foreground mt-1">Esta contraseña se usará para el acceso del director. Asegúrese de que sea segura.</p>
                   </div>

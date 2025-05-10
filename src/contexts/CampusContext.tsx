@@ -138,18 +138,16 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
           rootStyle.setProperty('--dynamic-primary-s', hslColor.s.toString() + '%');
           rootStyle.setProperty('--dynamic-primary-l', hslColor.l.toString() + '%');
 
-          // Determine foreground color based on primary lightness
-          if (hslColor.l > 60) { // If primary is light, use dark text
+          if (hslColor.l > 60) { 
             rootStyle.setProperty('--dynamic-primary-foreground-h', DARK_TEXT_H.toString());
             rootStyle.setProperty('--dynamic-primary-foreground-s', DARK_TEXT_S.toString() + '%');
             rootStyle.setProperty('--dynamic-primary-foreground-l', DARK_TEXT_L.toString() + '%');
-          } else { // If primary is dark, use light text
+          } else { 
             rootStyle.setProperty('--dynamic-primary-foreground-h', DEFAULT_PRIMARY_FG_H.toString());
             rootStyle.setProperty('--dynamic-primary-foreground-s', DEFAULT_PRIMARY_FG_S.toString() + '%');
             rootStyle.setProperty('--dynamic-primary-foreground-l', DEFAULT_PRIMARY_FG_L.toString() + '%');
           }
         } else {
-          // Fallback if hexToHsl returns null (invalid color)
           rootStyle.removeProperty('--dynamic-primary-h');
           rootStyle.removeProperty('--dynamic-primary-s');
           rootStyle.removeProperty('--dynamic-primary-l');
@@ -158,7 +156,6 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
           rootStyle.removeProperty('--dynamic-primary-foreground-l');
         }
       } else {
-        // No campus selected or no institutionColor, revert to defaults by removing dynamic properties
         rootStyle.removeProperty('--dynamic-primary-h');
         rootStyle.removeProperty('--dynamic-primary-s');
         rootStyle.removeProperty('--dynamic-primary-l');
@@ -174,7 +171,7 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
     const now = new Date().toISOString();
     const newCampus: LegacyCampus = {
       ...campusData,
-      institutionColor: campusData.institutionColor || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`, // Ensure color exists
+      institutionColor: campusData.institutionColor || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       status: 'A',
       createdAt: now,
@@ -184,11 +181,34 @@ export const CampusProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateCampus = (updatedCampusData: LegacyCampus) => {
+    const newUpdatedAt = new Date().toISOString();
+    const campusWithTimestamp: LegacyCampus = {
+        ...updatedCampusData, 
+        name: updatedCampusData.name,
+        code: updatedCampusData.code,
+        institutionColor: updatedCampusData.institutionColor || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
+        educationalLevelSelection: updatedCampusData.educationalLevelSelection || "",
+        institutionLogo: updatedCampusData.institutionLogo || "",
+        directorPhoto: updatedCampusData.directorPhoto || "",
+        directorFirstName: updatedCampusData.directorFirstName || "",
+        directorLastName: updatedCampusData.directorLastName || "",
+        directorDocumentNumber: updatedCampusData.directorDocumentNumber || "",
+        directorPhoneNumber: updatedCampusData.directorPhoneNumber || "",
+        directorEmail: updatedCampusData.directorEmail || "",
+        status: updatedCampusData.status || 'A', 
+        createdAt: updatedCampusData.createdAt || newUpdatedAt, 
+        updatedAt: newUpdatedAt,
+    };
+  
     setCampuses(prevCampuses =>
       prevCampuses.map(c =>
-        c.id === updatedCampusData.id ? { ...updatedCampusData, institutionColor: updatedCampusData.institutionColor || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`, updatedAt: new Date().toISOString() } : c
+        c.id === campusWithTimestamp.id ? campusWithTimestamp : c
       )
     );
+  
+    if (selectedCampus && selectedCampus.id === campusWithTimestamp.id) {
+      setSelectedCampusState(campusWithTimestamp);
+    }
   };
 
   const deleteCampus = (campusId: string) => {
