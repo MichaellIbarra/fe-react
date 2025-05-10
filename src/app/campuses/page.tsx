@@ -125,8 +125,8 @@ export default function CampusesPage() {
   };
 
   const filteredCampuses = campuses.filter(campus =>
-    campus.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    campus.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (campus?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (campus?.code?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
   
   if (isAuthLoading || !currentUser || !campusesLoaded) {
