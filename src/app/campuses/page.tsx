@@ -26,21 +26,24 @@ import Image from "next/image";
 
 const fileSchema = z.preprocess(
     (value) => {
+      // For new file uploads from FileList
       if (typeof window !== 'undefined' && value instanceof FileList && value.length > 0) {
         return new Promise((resolve, reject) => {
           const file = value[0];
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
+          reader.onload = () => resolve(reader.result as string); // This will be a data URI
           reader.onerror = (error) => reject(error);
           reader.readAsDataURL(file);
         });
       }
-      if (typeof value === 'string' || value === undefined || value === null || value === '') {
+      // If it's already a string (data URI from existing data or cleared), pass it through
+      if (typeof value === 'string' || value === undefined || value === null) {
         return value;
       }
+      // If it's an empty FileList or some other unexpected type, treat as empty/undefined
       return undefined; 
     },
-    z.string().optional().or(z.literal('')) 
+    z.string().optional().nullable().or(z.literal('')) // Allow data URI, empty string, null, or undefined
 );
 
 
@@ -76,7 +79,7 @@ export default function CampusesPage() {
 
   const [institutionLogoPreview, setInstitutionLogoPreview] = useState<string | null>(null);
   const [directorPhotoPreview, setDirectorPhotoPreview] = useState<string | null>(null);
-
+  
   const form = useForm<CampusFormData>({
     resolver: zodResolver(campusSchema),
     defaultValues: {
@@ -94,6 +97,8 @@ export default function CampusesPage() {
       directorPassword: "",
     },
   });
+  
+  const institutionColorValue = form.watch("institutionColor");
 
    useEffect(() => {
     if (!isAuthLoading && currentUser && currentUser.role !== 'superuser') {
@@ -123,19 +128,20 @@ export default function CampusesPage() {
             directorEmail: editingCampus.directorEmail || "",
             directorPassword: "", 
         });
-        setInstitutionLogoPreview(null); 
-        setDirectorPhotoPreview(null);   
+        // Set previews from existing data if available, RHF will handle field values
+        setInstitutionLogoPreview(editingCampus.institutionLogo || null); 
+        setDirectorPhotoPreview(editingCampus.directorPhoto || null);   
       } else if (!viewingCampus) { 
         form.reset({ 
-          name: "", code: "", institutionLogo: "", institutionColor: "#3498db",
-          educationalLevelSelection: "", directorPhoto: "", directorFirstName: "",
+          name: "", code: "", institutionLogo: null, institutionColor: "#3498db",
+          educationalLevelSelection: "", directorPhoto: null, directorFirstName: "",
           directorLastName: "", directorDocumentNumber: "", directorPhoneNumber: "",
           directorEmail: "", directorPassword: "",
         });
         setInstitutionLogoPreview(null);
         setDirectorPhotoPreview(null);
       }
-    } else { // When modal is closed, also clear previews
+    } else { 
         setInstitutionLogoPreview(null);
         setDirectorPhotoPreview(null);
     }
@@ -143,8 +149,18 @@ export default function CampusesPage() {
 
   const onSubmit = async (data: CampusFormData) => {
     const processedData = { ...data };
+
+    // If a preview exists (meaning a new file was selected), the data URI is already in `data`
+    // If no new file was selected for an existing campus, retain the old image URI
+    if (editingCampus) {
+        if (data.institutionLogo === undefined || data.institutionLogo === null || data.institutionLogo === "") { // No new file selected or deliberately cleared
+            processedData.institutionLogo = institutionLogoPreview || editingCampus.institutionLogo || "";
+        }
+        if (data.directorPhoto === undefined || data.directorPhoto === null || data.directorPhoto === "") {
+            processedData.directorPhoto = directorPhotoPreview || editingCampus.directorPhoto || "";
+        }
+    }
     
-    // If password is empty during edit, don't update it (keep existing password)
     if (editingCampus && !processedData.directorPassword) {
         delete processedData.directorPassword;
     }
@@ -386,8 +402,8 @@ export default function CampusesPage() {
                         </Button>
                         </div>
                     )}
-                    <Controller name="institutionLogo" control={form.control} render={({ field: { onChange, value, ...restField } }) => ( // value here is what RHF holds
-                        <Input id="institutionLogoFile" type="file" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => { setInstitutionLogoPreview(reader.result as string); onChange(e.target.files); }; reader.readAsDataURL(file); } else { onChange(e.target.files); if (!form.getValues("institutionLogo")) setInstitutionLogoPreview(null); }}} className={cn(form.formState.errors.institutionLogo && "border-destructive")} accept="image/*" {...restField} />
+                    <Controller name="institutionLogo" control={form.control} render={({ field: { onChange, value, ...restField } }) => ( 
+                        <Input id="institutionLogoFile" type="file" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => { setInstitutionLogoPreview(reader.result as string); onChange(e.target.files); }; reader.readAsDataURL(file); } else { onChange(null); if (!editingCampus?.institutionLogo) setInstitutionLogoPreview(null); else setInstitutionLogoPreview(editingCampus.institutionLogo); }}} className={cn(form.formState.errors.institutionLogo && "border-destructive")} accept="image/*" {...restField} />
                     )}/>
                     {form.formState.errors.institutionLogo && <p className="text-destructive text-sm mt-1">{form.formState.errors.institutionLogo.message as string}</p>}
                   </div>
@@ -401,11 +417,23 @@ export default function CampusesPage() {
                     <Input id="code" {...form.register("code")} placeholder="Ej: STRT-01" className={cn(form.formState.errors.code && "border-destructive")} />
                     {form.formState.errors.code && <p className="text-destructive text-sm mt-1">{form.formState.errors.code.message}</p>}
                   </div>
-                  <div className="flex flex-col">
-                    <Label htmlFor="institutionColor">Paleta de Color Principal</Label>
+                  <div>
+                    <Label htmlFor="institutionColorText">Paleta de Color Principal</Label>
                     <div className="flex items-center gap-2">
-                       <Input id="institutionColor" type="color" {...form.register("institutionColor")} className={cn("p-1 h-10 w-14",form.formState.errors.institutionColor && "border-destructive")} />
-                       <Input {...form.register("institutionColor")} placeholder="#3498db" className={cn("flex-1",form.formState.errors.institutionColor && "border-destructive")} />
+                       <Input 
+                        id="institutionColorPicker" 
+                        type="color" 
+                        value={institutionColorValue || "#3498db"}
+                        onChange={(e) => form.setValue("institutionColor", e.target.value, { shouldValidate: true, shouldDirty: true })}
+                        className={cn("p-1 h-10 w-14",form.formState.errors.institutionColor && "border-destructive")} 
+                       />
+                       <Input 
+                        id="institutionColorText"
+                        type="text"
+                        value={institutionColorValue || ""}
+                        onChange={(e) => form.setValue("institutionColor", e.target.value, { shouldValidate: true, shouldDirty: true })}
+                        placeholder="#3498db" 
+                        className={cn("flex-1",form.formState.errors.institutionColor && "border-destructive")} />
                     </div>
                     {form.formState.errors.institutionColor && <p className="text-destructive text-sm mt-1">{form.formState.errors.institutionColor.message}</p>}
                   </div>
@@ -439,7 +467,7 @@ export default function CampusesPage() {
                         </div>
                     )}
                      <Controller name="directorPhoto" control={form.control} render={({ field: { onChange, value, ...restField } }) => (
-                          <Input id="directorPhotoFile" type="file" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => { setDirectorPhotoPreview(reader.result as string); onChange(e.target.files); }; reader.readAsDataURL(file); } else { onChange(e.target.files); if(!form.getValues("directorPhoto")) setDirectorPhotoPreview(null); }}} className={cn(form.formState.errors.directorPhoto && "border-destructive")} accept="image/*" {...restField}/>
+                          <Input id="directorPhotoFile" type="file" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => { setDirectorPhotoPreview(reader.result as string); onChange(e.target.files); }; reader.readAsDataURL(file); } else { onChange(null); if(!editingCampus?.directorPhoto) setDirectorPhotoPreview(null); else setDirectorPhotoPreview(editingCampus.directorPhoto)}}} className={cn(form.formState.errors.directorPhoto && "border-destructive")} accept="image/*" {...restField}/>
                       )}/>
                     {form.formState.errors.directorPhoto && <p className="text-destructive text-sm mt-1">{form.formState.errors.directorPhoto.message as string}</p>}
                   </div>
@@ -490,3 +518,4 @@ export default function CampusesPage() {
     </DashboardLayout>
   );
 }
+
