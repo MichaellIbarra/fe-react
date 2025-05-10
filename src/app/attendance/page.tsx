@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, CheckCircle, XCircle, Loader2, AlertTriangle, Building2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, CheckCircle, XCircle, Loader2, AlertTriangle, Building2, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { LegacyStudent, LegacyAttendanceRecord } from "@/types";
@@ -50,7 +50,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
     setScanResult(null);
     setError(null);
     setLastScannedData(null);
-    setHasCameraPermission(null); // Reset permission to trigger request again
+    setHasCameraPermission(null); 
     setIsScanning(false); 
     if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
       try {
@@ -68,7 +68,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
         try {
           streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
           setHasCameraPermission(true);
-          setIsScanning(true); // Start scanning once permission is granted
+          setIsScanning(true); 
         } catch (err) {
           setHasCameraPermission(false);
           setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
@@ -222,6 +222,8 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
 
 
 const ITEMS_PER_PAGE = 10;
+const gradeOptions = ["Todos", "Kinder", "1ro", "2do", "3ro", "4to", "5to", "6to"];
+const sectionOptions = ["Todas", "A", "B", "C", "D", "E", "F"];
 
 export default function AttendancePage() {
   const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
@@ -237,6 +239,8 @@ export default function AttendancePage() {
   const [qrValue, setQrValue] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>("Todos");
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>("Todas");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -311,22 +315,21 @@ export default function AttendancePage() {
   
   const handleAttendanceRecordedByQr = (studentId: string, studentName: string) => {
     handleStatusChange(studentId, 'Presente');
-    // Optionally, you might want to bring the user to the page where the student is listed
-    // or provide more direct feedback if the student isn't on the current page.
   };
   
   const studentsForSelectedCampus = useMemo(() => {
-    // TODO: Filter by selectedCampus.id when student.campusId is available
     return selectedCampus ? students : [];
   }, [students, selectedCampus]);
 
   const filteredStudents = useMemo(() => {
-    setCurrentPage(1); // Reset to first page on search
+    setCurrentPage(1); // Reset to first page on search or filter change
     return studentsForSelectedCampus.filter(student =>
+      (selectedGradeFilter === "Todos" || student.grade === selectedGradeFilter) &&
+      (selectedSectionFilter === "Todas" || student.section === selectedSectionFilter) &&
       (`${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
        (student.dni && student.dni.toLowerCase().includes(searchTerm.toLowerCase())))
     );
-  }, [studentsForSelectedCampus, searchTerm]);
+  }, [studentsForSelectedCampus, searchTerm, selectedGradeFilter, selectedSectionFilter]);
 
   const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
   const paginatedStudents = useMemo(() => {
@@ -438,14 +441,39 @@ export default function AttendancePage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex items-center gap-2">
-            <Search className="text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nombre o DNI..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
+          <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2 flex-grow sm:flex-grow-0">
+                <Search className="text-muted-foreground" />
+                <Input
+                placeholder="Buscar por nombre o DNI..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-xs" 
+                />
+            </div>
+            <div className="flex items-center gap-2">
+                <Filter className="text-muted-foreground h-5 w-5" />
+                <Select value={selectedGradeFilter} onValueChange={setSelectedGradeFilter}>
+                    <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Filtrar por Grado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {gradeOptions.map(grade => (
+                            <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Select value={selectedSectionFilter} onValueChange={setSelectedSectionFilter}>
+                    <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Filtrar por Sección" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {sectionOptions.map(section => (
+                            <SelectItem key={section} value={section}>{section}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
           </div>
 
           {paginatedStudents.length > 0 ? (
@@ -524,10 +552,11 @@ export default function AttendancePage() {
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
               <Users className="h-16 w-16 text-muted-foreground" />
               <p className="text-muted-foreground text-lg mt-4">
-                {searchTerm ? "No se encontraron estudiantes con ese criterio." : "No hay estudiantes para mostrar en esta sede."}
+                {searchTerm || selectedGradeFilter !== "Todos" || selectedSectionFilter !== "Todas" ? "No se encontraron estudiantes con los filtros aplicados." : "No hay estudiantes para mostrar en esta sede."}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 {searchTerm ? "Intente con otros términos de búsqueda o " : ""}
+                {(selectedGradeFilter !== "Todos" || selectedSectionFilter !== "Todas") ? "ajuste los filtros o " : ""}
                 Agregue estudiantes en la sección de Gestión de Estudiantes para esta sede.
               </p>
             </div>
@@ -546,4 +575,3 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
-
