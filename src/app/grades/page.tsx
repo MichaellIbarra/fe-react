@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users, Loader2, Building2 } from "lucide-react";
+import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users, Loader2, Building2, Search } from "lucide-react";
 import type { LegacyStudent, LegacyGrade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
@@ -48,6 +48,7 @@ export default function GradesPage() {
   const [editingGrade, setEditingGrade] = useState<LegacyGrade | null>(null);
   const { toast } = useToast();
   const [isLoadingGrades, setIsLoadingGrades] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const form = useForm<GradeFormData>({
     resolver: zodResolver(gradeSchema),
@@ -153,7 +154,16 @@ export default function GradesPage() {
   // TODO: Filter students by selectedCampus.id once student data includes campusId
   const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
 
-  const filteredGrades = selectedStudentId ? grades.filter(g => g.studentId === selectedStudentId) : [];
+  const filteredGrades = useMemo(() => {
+    if (!selectedStudentId) return [];
+    return grades.filter(grade =>
+      grade.studentId === selectedStudentId &&
+      (grade.subjectArea.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       String(grade.gradeValue).toLowerCase().includes(searchTerm.toLowerCase()) ||
+       grade.period.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [grades, selectedStudentId, searchTerm]);
+
   const selectedStudentDetails = selectedStudentId ? getStudentById(selectedStudentId) : null;
   const selectedStudentName = selectedStudentDetails ? `${selectedStudentDetails.firstName} ${selectedStudentDetails.lastName}` : 'el estudiante';
 
@@ -205,22 +215,42 @@ export default function GradesPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <Label htmlFor="student-select">Seleccionar Estudiante</Label>
-            <Select value={selectedStudentId || ""} onValueChange={setSelectedStudentId}>
-              <SelectTrigger id="student-select" disabled={studentsForSelectedCampus.length === 0}>
-                <SelectValue placeholder="Seleccione un estudiante..." />
-              </SelectTrigger>
-              <SelectContent>
-                {studentsForSelectedCampus.map(student => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.firstName} {student.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-             {studentsForSelectedCampus.length === 0 && (
-                <p className="text-sm text-muted-foreground mt-1">No hay estudiantes en esta sede. Agregue estudiantes primero.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <Label htmlFor="student-select">Seleccionar Estudiante</Label>
+              <Select value={selectedStudentId || ""} onValueChange={(value) => {setSelectedStudentId(value); setSearchTerm("");}} disabled={studentsForSelectedCampus.length === 0}>
+                <SelectTrigger id="student-select">
+                  <SelectValue placeholder="Seleccione un estudiante..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {studentsForSelectedCampus.map(student => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.firstName} {student.lastName} ({student.dni})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {studentsForSelectedCampus.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">No hay estudiantes en esta sede. Agregue estudiantes primero.</p>
+              )}
+            </div>
+            {selectedStudentId && (
+              <div className="flex items-end">
+                <div className="w-full">
+                  <Label htmlFor="grade-search">Buscar Notas (Materia, Nota, Periodo)</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="grade-search"
+                      type="search"
+                      placeholder="Ej: Matemáticas, 15, Bimestre 1..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 w-full"
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -260,8 +290,12 @@ export default function GradesPage() {
             ) : (
               <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
                 <BookOpen className="h-16 w-16 text-muted-foreground" />
-                <p className="text-muted-foreground text-lg mt-4">No hay notas registradas para este estudiante.</p>
-                <p className="text-sm text-muted-foreground mt-2">Agregue una nueva nota para comenzar.</p>
+                <p className="text-muted-foreground text-lg mt-4">
+                  {searchTerm ? "No se encontraron notas con ese criterio." : "No hay notas registradas para este estudiante."}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {searchTerm ? "Intente con otros términos." : "Agregue una nueva nota para comenzar."}
+                </p>
               </div>
             )
           ) : (
