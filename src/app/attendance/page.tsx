@@ -1,17 +1,18 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, Camera, CheckCircle, XCircle, Loader2, AlertTriangle, Building2 } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Users, QrCode, ScanLine, CheckCircle, XCircle, Loader2, AlertTriangle, Building2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { LegacyStudent, LegacyAttendanceRecord } from "@/types";
@@ -32,7 +33,7 @@ interface QrScannerModalContentProps {
   onAttendanceRecorded: (studentId: string, studentName: string) => void;
   onClose: () => void;
   getStudentById: (studentId: string) => LegacyStudent | undefined;
-  isQrScannerModalOpen: boolean; // Added to control permission request
+  isQrScannerModalOpen: boolean;
 }
 
 const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedDate, onAttendanceRecorded, onClose, getStudentById, isQrScannerModalOpen }) => {
@@ -43,14 +44,21 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const html5QrCodeRef = useRef(null); // Ref for Html5Qrcode instance
+  const html5QrCodeRef = useRef(null); 
 
   const resetScanner = async () => {
     setScanResult(null);
     setError(null);
     setLastScannedData(null);
+    setHasCameraPermission(null); // Reset permission to trigger request again
     setIsScanning(false); 
-    setHasCameraPermission(null); 
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      try {
+        await html5QrCodeRef.current.stop();
+      } catch (e) {
+        console.error("Error stopping scanner on reset:", e);
+      }
+    }
   };
 
   useEffect(() => {
@@ -58,10 +66,9 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
     const requestCameraPermission = async () => {
       if (typeof navigator !== "undefined" && navigator.mediaDevices) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          streamInstance = stream;
+          streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
           setHasCameraPermission(true);
-          setIsScanning(true);
+          setIsScanning(true); // Start scanning once permission is granted
         } catch (err) {
           setHasCameraPermission(false);
           setError("No se pudo acceder a la cámara. Por favor, verifique los permisos.");
@@ -129,10 +136,9 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
       });
     }
   };
-
+  
   const handleScanFailure = (errorMessage: string) => {
-    // This can be noisy if QR code is not in view constantly.
-    // console.warn(`QR Scan Failure: ${errorMessage}`);
+     // console.warn(`QR Scan Failure: ${errorMessage}`);
   };
   
   if (hasCameraPermission === null && isQrScannerModalOpen) { 
@@ -172,7 +178,7 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
             onScanFailure={handleScanFailure}
             qrboxSize={200} 
             fps={5}
-            html5QrCodeRef={html5QrCodeRef} // Pass the ref
+            html5QrCodeRef={html5QrCodeRef}
           />
         </div>
       )}
@@ -215,9 +221,11 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
 };
 
 
+const ITEMS_PER_PAGE = 10;
+
 export default function AttendancePage() {
   const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();
-  const { selectedCampus, isLoadingSelection: campusLoading, campuses } = useCampusContext();
+  const { selectedCampus, isLoadingSelection: campusLoading } = useCampusContext();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
   const { toast } = useToast();
@@ -228,16 +236,16 @@ export default function AttendancePage() {
   const [selectedStudentForQr, setSelectedStudentForQr] = useState<Pick<LegacyStudent, "id" | "firstName" | "lastName"> | null>(null);
   const [qrValue, setQrValue] = useState("");
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Load and initialize attendance data
   useEffect(() => {
     if (typeof window !== 'undefined' && selectedDate && studentsLoaded && selectedCampus && !campusLoading) {
       setIsLoadingAttendance(true);
       const storageKey = getAttendanceStorageKey(selectedDate, selectedCampus.id);
       const storedAttendance = localStorage.getItem(storageKey);
       
-      // TODO: Filter students by selectedCampus.id once student data includes campusId
-      const campusStudents = students; // Placeholder
+      const campusStudents = students; 
 
       if (storedAttendance) {
         try {
@@ -255,13 +263,11 @@ export default function AttendancePage() {
       }
       setIsLoadingAttendance(false);
     } else if (!selectedCampus && !campusLoading) {
-      // No campus selected, clear attendance data
       setAttendanceData({});
       setIsLoadingAttendance(false);
     }
   }, [selectedDate, students, studentsLoaded, selectedCampus, campusLoading]);
 
-  // Save attendance data to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && selectedDate && !isLoadingAttendance && Object.keys(attendanceData).length > 0 && selectedCampus) {
       const storageKey = getAttendanceStorageKey(selectedDate, selectedCampus.id);
@@ -286,7 +292,6 @@ export default function AttendancePage() {
       });
       return;
     }
-    console.log("Attendance Data for", format(selectedDate, "PPP", { locale: es }), "at campus", selectedCampus.name, attendanceData);
     toast({
       title: "Asistencia Guardada",
       description: `Se ha guardado la asistencia para el ${format(selectedDate, "PPP", { locale: es })} en la sede ${selectedCampus.name}.`,
@@ -306,10 +311,42 @@ export default function AttendancePage() {
   
   const handleAttendanceRecordedByQr = (studentId: string, studentName: string) => {
     handleStatusChange(studentId, 'Presente');
+    // Optionally, you might want to bring the user to the page where the student is listed
+    // or provide more direct feedback if the student isn't on the current page.
   };
   
-  // TODO: Filter students by selectedCampus.id once student data includes campusId
-  const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
+  const studentsForSelectedCampus = useMemo(() => {
+    // TODO: Filter by selectedCampus.id when student.campusId is available
+    return selectedCampus ? students : [];
+  }, [students, selectedCampus]);
+
+  const filteredStudents = useMemo(() => {
+    setCurrentPage(1); // Reset to first page on search
+    return studentsForSelectedCampus.filter(student =>
+      (`${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       (student.dni && student.dni.toLowerCase().includes(searchTerm.toLowerCase())))
+    );
+  }, [studentsForSelectedCampus, searchTerm]);
+
+  const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredStudents.slice(startIndex, endIndex);
+  }, [filteredStudents, currentPage]);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
 
   if (!studentsLoaded || isLoadingAttendance || campusLoading) {
      return (
@@ -401,7 +438,17 @@ export default function AttendancePage() {
           </div>
         </CardHeader>
         <CardContent>
-          {studentsForSelectedCampus.length > 0 ? (
+          <div className="mb-4 flex items-center gap-2">
+            <Search className="text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre o DNI..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          {paginatedStudents.length > 0 ? (
             <>
               <div className="overflow-x-auto">
                 <Table>
@@ -414,7 +461,7 @@ export default function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {studentsForSelectedCampus.map((student) => (
+                    {paginatedStudents.map((student) => (
                       <TableRow key={student.id}>
                         <TableCell>{student.firstName} {student.lastName}</TableCell>
                         <TableCell>{student.grade} &quot;{student.section}&quot;</TableCell>
@@ -444,17 +491,45 @@ export default function AttendancePage() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-6 flex justify-end">
-                <Button onClick={handleSaveAttendance}>
+              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <Button onClick={handleSaveAttendance} className="w-full sm:w-auto">
                   Guardar Asistencia Manual
                 </Button>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handlePrevPage}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleNextPage}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
               <Users className="h-16 w-16 text-muted-foreground" />
-              <p className="text-muted-foreground text-lg mt-4">No hay estudiantes para mostrar en esta sede.</p>
-              <p className="text-sm text-muted-foreground mt-2">Agregue estudiantes en la sección de Gestión de Estudiantes para esta sede.</p>
+              <p className="text-muted-foreground text-lg mt-4">
+                {searchTerm ? "No se encontraron estudiantes con ese criterio." : "No hay estudiantes para mostrar en esta sede."}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {searchTerm ? "Intente con otros términos de búsqueda o " : ""}
+                Agregue estudiantes en la sección de Gestión de Estudiantes para esta sede.
+              </p>
             </div>
           )}
         </CardContent>
@@ -471,3 +546,4 @@ export default function AttendancePage() {
     </DashboardLayout>
   );
 }
+
