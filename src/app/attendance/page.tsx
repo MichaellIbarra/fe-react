@@ -222,8 +222,8 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
 
 
 const ITEMS_PER_PAGE = 10;
-const gradeOptions = ["Todos", "Kinder", "1ro", "2do", "3ro", "4to", "5to", "6to"];
-const sectionOptions = ["Todas", "A", "B", "C", "D", "E", "F"];
+const gradeOptions = ["Todos", "Kinder", "1ro", "2do", "3ro", "4to", "5to"];
+const sectionOptions = ["Todas", "A", "B", "C", "D", "E"];
 
 export default function AttendancePage() {
   const { students, getStudentById, isLoaded: studentsLoaded } = useStudentContext();

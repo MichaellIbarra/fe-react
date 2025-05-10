@@ -22,8 +22,8 @@ import { useStudentContext } from "@/contexts/StudentContext";
 import { useCampusContext } from "@/contexts/CampusContext";
 import Link from "next/link";
 
-const gradeOptions = ["Kinder", "1ro", "2do", "3ro", "4to", "5to", "6to"]; // Added 6to
-const sectionOptions = ["A", "B", "C", "D", "E", "F"]; // Added F
+const gradeOptions = ["Kinder", "1ro", "2do", "3ro", "4to", "5to"]; 
+const sectionOptions = ["A", "B", "C", "D", "E"];
 
 const studentSchema = z.object({
   dni: z.string().min(8, "El DNI debe tener al menos 8 caracteres.").max(15, "El DNI no debe exceder los 15 caracteres."),
