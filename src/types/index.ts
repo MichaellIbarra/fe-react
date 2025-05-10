@@ -58,12 +58,27 @@ export interface LegacyProgressReport {
 
 export interface LegacyCampus {
   id: string; // Unique identifier (auto-generated string)
-  name: string; // Corresponds to campus_name
-  code: string; // Corresponds to campus_code
-  address?: string;
-  contactPerson?: string;
-  contactEmail?: string;
-  contactPhone?: string;
+  name: string; // Nombre de la Institucion
+  code: string; // Codigo de la Institucion (Kept for identification)
+  
+  institutionLogo?: string; // URL or path to logo
+  institutionColor?: string; // Hex color code, e.g., #FF0000
+  educationalLevelSelection?: string; // "Primaria", "Secundaria", "Primaria y Secundaria"
+
+  directorPhoto?: string; // URL or path to director's photo
+  directorFirstName?: string;
+  directorLastName?: string;
+  directorDocumentNumber?: string;
+  directorPhoneNumber?: string;
+  directorEmail?: string;
+  directorPassword?: string; // Storing passwords/hints like this is not secure
+
+  // Old fields that might still be in data but not actively used by the new form:
+  address?: string; 
+  contactPerson?: string; // Replaced by directorFirstName/LastName
+  contactEmail?: string; // Replaced by directorEmail
+  contactPhone?: string; // Replaced by directorPhoneNumber
+
   status: 'A' | 'I'; // Active, Inactive, default 'A'
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
