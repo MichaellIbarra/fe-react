@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Building2, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Loader2, Palette, Users, Briefcase, UploadCloud, LockKeyhole, GraduationCap } from "lucide-react";
+import { Building2, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Loader2, Palette, Users, Briefcase, UploadCloud, LockKeyhole, GraduationCap, Image as ImageIcon, UserSquare } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,16 +21,29 @@ import { cn } from "@/lib/utils";
 import { useCampusContext } from "@/contexts/CampusContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+
 
 const fileSchema = z.preprocess(
     (value) => {
-      if (typeof window !== 'undefined' && value instanceof FileList) {
-        return value.length > 0 ? value[0].name : undefined;
+      if (typeof window !== 'undefined' && value instanceof FileList && value.length > 0) {
+        return new Promise((resolve, reject) => {
+          const file = value[0];
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(file);
+        });
       }
-      return value; // keep existing string or undefined
+      // If it's already a string (data URI from previous edit), or undefined/empty string, keep it.
+      if (typeof value === 'string' || value === undefined || value === null || value === '') {
+        return value;
+      }
+      return undefined; // Fallback for unexpected types
     },
-    z.string().optional()
+    z.string().optional().or(z.literal('')) // Allow empty string for clearing the image
 );
+
 
 const campusSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres.").max(100),
@@ -97,10 +110,10 @@ export default function CampusesPage() {
         form.reset({
             name: editingCampus.name,
             code: editingCampus.code,
-            institutionLogo: editingCampus.institutionLogo || "",
+            institutionLogo: editingCampus.institutionLogo || "", // This will be a data URI if exists
             institutionColor: editingCampus.institutionColor || "#3498db",
             educationalLevelSelection: editingCampus.educationalLevelSelection || "",
-            directorPhoto: editingCampus.directorPhoto || "",
+            directorPhoto: editingCampus.directorPhoto || "", // This will be a data URI if exists
             directorFirstName: editingCampus.directorFirstName || "",
             directorLastName: editingCampus.directorLastName || "",
             directorDocumentNumber: editingCampus.directorDocumentNumber || "",
@@ -127,14 +140,24 @@ export default function CampusesPage() {
     }
   }, [editingCampus, viewingCampus, form, isModalOpen]);
 
-  const onSubmit = (data: CampusFormData) => {
-    // The 'data' object here will have institutionLogo and directorPhoto as strings (filenames)
-    // thanks to the Zod preprocess.
+  const onSubmit = async (data: CampusFormData) => {
+    // The 'data' object here will have institutionLogo and directorPhoto as resolved data URIs
+    // or empty strings.
+    const processedData = { ...data };
+
+    // Handle file inputs that might be promises
+    if (data.institutionLogo instanceof Promise) {
+      processedData.institutionLogo = await data.institutionLogo;
+    }
+    if (data.directorPhoto instanceof Promise) {
+      processedData.directorPhoto = await data.directorPhoto;
+    }
+    
     if (editingCampus) {
-      updateCampus({ ...editingCampus, ...data });
+      updateCampus({ ...editingCampus, ...processedData });
       toast({ title: "Sede Actualizada", description: "Los datos de la sede han sido actualizados." });
     } else {
-      addCampus(data);
+      addCampus(processedData);
       toast({ title: "Sede Agregada", description: "La nueva sede ha sido agregada." });
     }
     setIsModalOpen(false);
@@ -308,7 +331,14 @@ export default function CampusesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 border rounded-md">
                   <div><Label>Nombre:</Label><p className="text-sm">{viewingCampus.name}</p></div>
                   <div><Label>Código:</Label><p className="text-sm">{viewingCampus.code}</p></div>
-                  <div><Label>Logo:</Label><p className="text-sm">{viewingCampus.institutionLogo || "N/A"}</p></div>
+                  <div>
+                    <Label>Logo:</Label>
+                    {viewingCampus.institutionLogo && typeof viewingCampus.institutionLogo === 'string' && viewingCampus.institutionLogo.startsWith('data:image') ? (
+                       <Image src={viewingCampus.institutionLogo} alt="Logo Institucional" width={100} height={100} className="rounded-md border object-contain mt-1" data-ai-hint="institution logo"/>
+                    ) : (
+                      <p className="text-sm">{viewingCampus.institutionLogo || "N/A"}</p>
+                    )}
+                  </div>
                   <div><Label>Color Paleta:</Label>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded border" style={{ backgroundColor: viewingCampus.institutionColor || '#ffffff' }}></div>
@@ -321,7 +351,14 @@ export default function CampusesPage() {
               <section>
                  <h3 className="text-lg font-semibold mb-2 text-primary">Información del Director</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 border rounded-md">
-                    <div><Label>Foto:</Label><p className="text-sm">{viewingCampus.directorPhoto || "N/A"}</p></div>
+                    <div>
+                      <Label>Foto:</Label>
+                      {viewingCampus.directorPhoto && typeof viewingCampus.directorPhoto === 'string' && viewingCampus.directorPhoto.startsWith('data:image') ? (
+                        <Image src={viewingCampus.directorPhoto} alt="Foto del Director" width={100} height={100} className="rounded-md border object-contain mt-1" data-ai-hint="director photo"/>
+                      ) : (
+                        <p className="text-sm">{viewingCampus.directorPhoto || "N/A"}</p>
+                      )}
+                    </div>
                     <div><Label>Nombres:</Label><p className="text-sm">{viewingCampus.directorFirstName || "N/A"}</p></div>
                     <div><Label>Apellidos:</Label><p className="text-sm">{viewingCampus.directorLastName || "N/A"}</p></div>
                     <div><Label>N° Documento:</Label><p className="text-sm">{viewingCampus.directorDocumentNumber || "N/A"}</p></div>
@@ -344,9 +381,20 @@ export default function CampusesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <div>
                     <Label htmlFor="institutionLogo">Logo Institucional</Label>
-                    <Input id="institutionLogo" type="file" {...form.register("institutionLogo")} className={cn(form.formState.errors.institutionLogo && "border-destructive")} 
-                      accept="image/*"
-                    />
+                    <Controller
+                        name="institutionLogo"
+                        control={form.control}
+                        render={({ field: { onChange, value, ...restField } }) => (
+                          <Input 
+                            id="institutionLogo" 
+                            type="file" 
+                            onChange={(e) => onChange(e.target.files)} // Pass FileList to Zod preprocess
+                            className={cn(form.formState.errors.institutionLogo && "border-destructive")} 
+                            accept="image/*"
+                            {...restField} // Pass other field props like onBlur, ref
+                          />
+                        )}
+                      />
                     {form.formState.errors.institutionLogo && <p className="text-destructive text-sm mt-1">{form.formState.errors.institutionLogo.message}</p>}
                   </div>
                   <div>
@@ -399,9 +447,20 @@ export default function CampusesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <div>
                     <Label htmlFor="directorPhoto">Foto del Director</Label>
-                    <Input id="directorPhoto" type="file" {...form.register("directorPhoto")} className={cn(form.formState.errors.directorPhoto && "border-destructive")} 
-                      accept="image/*"
-                    />
+                     <Controller
+                        name="directorPhoto"
+                        control={form.control}
+                        render={({ field: { onChange, value, ...restField } }) => (
+                          <Input 
+                            id="directorPhoto" 
+                            type="file" 
+                            onChange={(e) => onChange(e.target.files)} 
+                            className={cn(form.formState.errors.directorPhoto && "border-destructive")} 
+                            accept="image/*"
+                            {...restField}
+                          />
+                        )}
+                      />
                     {form.formState.errors.directorPhoto && <p className="text-destructive text-sm mt-1">{form.formState.errors.directorPhoto.message}</p>}
                   </div>
                   <div>
@@ -440,7 +499,7 @@ export default function CampusesPage() {
               
               <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
+                <Button type="submit" className="bg-accent hover:bg-accent/90">
                   {editingCampus ? "Guardar Cambios" : "Agregar Institución"}
                 </Button>
               </DialogFooter>
@@ -451,4 +510,3 @@ export default function CampusesPage() {
     </DashboardLayout>
   );
 }
-
