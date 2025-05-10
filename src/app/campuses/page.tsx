@@ -22,14 +22,24 @@ import { useCampusContext } from "@/contexts/CampusContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
+const fileSchema = z.preprocess(
+    (value) => {
+      if (typeof window !== 'undefined' && value instanceof FileList) {
+        return value.length > 0 ? value[0].name : undefined;
+      }
+      return value; // keep existing string or undefined
+    },
+    z.string().optional()
+);
+
 const campusSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres.").max(100),
-  code: z.string().min(2, "El código debe tener al menos 2 caracteres.").max(50), // Kept for internal ID
-  institutionLogo: z.string().optional(), // For file path or data URI placeholder
+  code: z.string().min(2, "El código debe tener al menos 2 caracteres.").max(50),
+  institutionLogo: fileSchema,
   institutionColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i, "Debe ser un color hexadecimal válido (ej: #FF0000).").optional().or(z.literal('')),
-  educationalLevelSelection: z.string().optional(), // E.g., "Primaria", "Secundaria", "Primaria y Secundaria"
+  educationalLevelSelection: z.string().optional(), 
   
-  directorPhoto: z.string().optional(), // For file path or data URI placeholder
+  directorPhoto: fileSchema,
   directorFirstName: z.string().min(2, "Nombre del director es muy corto.").max(50).optional().or(z.literal('')),
   directorLastName: z.string().min(2, "Apellido del director es muy corto.").max(50).optional().or(z.literal('')),
   directorDocumentNumber: z.string().regex(/^\d{8,15}$/, "N° de documento inválido.").optional().or(z.literal('')),
@@ -118,6 +128,8 @@ export default function CampusesPage() {
   }, [editingCampus, viewingCampus, form, isModalOpen]);
 
   const onSubmit = (data: CampusFormData) => {
+    // The 'data' object here will have institutionLogo and directorPhoto as strings (filenames)
+    // thanks to the Zod preprocess.
     if (editingCampus) {
       updateCampus({ ...editingCampus, ...data });
       toast({ title: "Sede Actualizada", description: "Los datos de la sede han sido actualizados." });
