@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users, Loader2, Building2, Search } from "lucide-react";
+import { GraduationCap, PlusCircle, Edit, Trash2, BookOpen, Users, Loader2, Building2, Search, Filter } from "lucide-react";
 import type { LegacyStudent, LegacyGrade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
@@ -25,11 +25,13 @@ import Link from "next/link";
 
 const mockSubjects: string[] = ["Matemáticas", "Comunicación", "Ciencias", "Personal Social", "Arte", "Inglés", "Educación Física"];
 const mockPeriods: string[] = ["Bimestre 1", "Bimestre 2", "Bimestre 3", "Bimestre 4"];
+const gradeOptions = ["Todos", "Kinder", "1ro", "2do", "3ro", "4to", "5to"];
+const sectionOptions = ["Todas", "A", "B", "C", "D", "E"];
 
 const gradeSchema = z.object({
   studentId: z.string().min(1, "Debe seleccionar un estudiante."),
   subjectArea: z.string().min(1, "Debe seleccionar una materia."),
-  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."), // Keep as string for flexibility (A, B, C, 1-20)
+  gradeValue: z.string().min(1, "La nota es requerida.").max(10, "La nota es muy larga."), 
   period: z.string().min(1, "Debe seleccionar un periodo."),
 });
 
@@ -48,7 +50,11 @@ export default function GradesPage() {
   const [editingGrade, setEditingGrade] = useState<LegacyGrade | null>(null);
   const { toast } = useToast();
   const [isLoadingGrades, setIsLoadingGrades] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
+  const [gradeSearchTerm, setGradeSearchTerm] = useState(""); 
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>("Todos");
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>("Todas");
 
   const form = useForm<GradeFormData>({
     resolver: zodResolver(gradeSchema),
@@ -60,7 +66,6 @@ export default function GradesPage() {
     },
   });
 
-  // Load grades from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && selectedCampus && !campusLoading) {
       setIsLoadingGrades(true);
@@ -74,16 +79,15 @@ export default function GradesPage() {
           setGrades([]);
         }
       } else {
-        setGrades([]); // Initialize if not found
+        setGrades([]); 
       }
       setIsLoadingGrades(false);
     } else if (!selectedCampus && !campusLoading) {
-        setGrades([]); // Clear grades if no campus selected
+        setGrades([]); 
         setIsLoadingGrades(false);
     }
   }, [selectedCampus, campusLoading]);
 
-  // Save grades to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoadingGrades && selectedCampus) {
       const storageKey = getGradesStorageKey(selectedCampus.id);
@@ -120,7 +124,6 @@ export default function GradesPage() {
     }
     const newGrade: LegacyGrade = {
       ...data,
-      // campusId: selectedCampus.id, // TODO: Add campusId to LegacyGrade type
       id: editingGrade ? editingGrade.id : String(Date.now()),
       dateAssigned: new Date().toISOString(),
     };
@@ -151,18 +154,35 @@ export default function GradesPage() {
     setIsModalOpen(true);
   };
 
-  // TODO: Filter students by selectedCampus.id once student data includes campusId
-  const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
+  const availableStudents = useMemo(() => {
+    return selectedCampus ? students : [];
+  }, [students, selectedCampus]);
+
+  const filteredStudentsForDropdown = useMemo(() => {
+    return availableStudents.filter(student =>
+        (selectedGradeFilter === "Todos" || student.grade === selectedGradeFilter) &&
+        (selectedSectionFilter === "Todas" || student.section === selectedSectionFilter) &&
+        (`${student.firstName} ${student.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+         (student.dni && student.dni.toLowerCase().includes(studentSearchTerm.toLowerCase())))
+    );
+  }, [availableStudents, studentSearchTerm, selectedGradeFilter, selectedSectionFilter]);
+
+  useEffect(() => {
+    if (selectedStudentId && !filteredStudentsForDropdown.find(s => s.id === selectedStudentId)) {
+        setSelectedStudentId(null);
+    }
+  }, [selectedStudentId, filteredStudentsForDropdown]);
+
 
   const filteredGrades = useMemo(() => {
     if (!selectedStudentId) return [];
     return grades.filter(grade =>
       grade.studentId === selectedStudentId &&
-      (grade.subjectArea.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       String(grade.gradeValue).toLowerCase().includes(searchTerm.toLowerCase()) ||
-       grade.period.toLowerCase().includes(searchTerm.toLowerCase()))
+      (grade.subjectArea.toLowerCase().includes(gradeSearchTerm.toLowerCase()) ||
+       String(grade.gradeValue).toLowerCase().includes(gradeSearchTerm.toLowerCase()) ||
+       grade.period.toLowerCase().includes(gradeSearchTerm.toLowerCase()))
     );
-  }, [grades, selectedStudentId, searchTerm]);
+  }, [grades, selectedStudentId, gradeSearchTerm]);
 
   const selectedStudentDetails = selectedStudentId ? getStudentById(selectedStudentId) : null;
   const selectedStudentName = selectedStudentDetails ? `${selectedStudentDetails.firstName} ${selectedStudentDetails.lastName}` : 'el estudiante';
@@ -215,44 +235,103 @@ export default function GradesPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label htmlFor="student-select">Seleccionar Estudiante</Label>
-              <Select value={selectedStudentId || ""} onValueChange={(value) => {setSelectedStudentId(value); setSearchTerm("");}} disabled={studentsForSelectedCampus.length === 0}>
-                <SelectTrigger id="student-select">
-                  <SelectValue placeholder="Seleccione un estudiante..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {studentsForSelectedCampus.map(student => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.firstName} {student.lastName} ({student.dni})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {studentsForSelectedCampus.length === 0 && (
-                  <p className="text-sm text-muted-foreground mt-1">No hay estudiantes en esta sede. Agregue estudiantes primero.</p>
-              )}
-            </div>
-            {selectedStudentId && (
-              <div className="flex items-end">
-                <div className="w-full">
-                  <Label htmlFor="grade-search">Buscar Notas (Materia, Nota, Periodo)</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="grade-search"
-                      type="search"
-                      placeholder="Ej: Matemáticas, 15, Bimestre 1..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 w-full"
-                    />
-                  </div>
+          {/* Filters for Student Selection */}
+          <div className="mb-6 p-4 border rounded-md shadow-sm bg-muted/20">
+            <h3 className="text-lg font-semibold mb-3 text-primary flex items-center">
+              <Filter className="mr-2 h-5 w-5" />
+              Filtrar Estudiantes
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="student-search-input">Buscar Estudiante (Nombre/DNI)</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="student-search-input"
+                    placeholder="Ej: Ana García o 123..."
+                    value={studentSearchTerm}
+                    onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    className="pl-8 w-full"
+                  />
                 </div>
               </div>
+              <div>
+                <Label htmlFor="grade-filter-select">Grado</Label>
+                <Select value={selectedGradeFilter} onValueChange={setSelectedGradeFilter}>
+                  <SelectTrigger id="grade-filter-select">
+                    <SelectValue placeholder="Todos los grados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gradeOptions.map(grade => (
+                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="section-filter-select">Sección</Label>
+                <Select value={selectedSectionFilter} onValueChange={setSelectedSectionFilter}>
+                  <SelectTrigger id="section-filter-select">
+                    <SelectValue placeholder="Todas las secciones" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sectionOptions.map(section => (
+                      <SelectItem key={section} value={section}>{section}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Selection Dropdown */}
+          <div className="mb-6">
+            <Label htmlFor="student-select">Seleccionar Estudiante de la Lista Filtrada</Label>
+            <Select 
+                value={selectedStudentId || ""} 
+                onValueChange={(value) => {setSelectedStudentId(value); setGradeSearchTerm("");}} 
+                disabled={filteredStudentsForDropdown.length === 0 && availableStudents.length > 0}
+            >
+              <SelectTrigger id="student-select">
+                <SelectValue placeholder={
+                    availableStudents.length === 0 ? "No hay estudiantes en esta sede" : 
+                    filteredStudentsForDropdown.length === 0 ? "No hay estudiantes con esos filtros" : 
+                    "Seleccione un estudiante..."
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredStudentsForDropdown.map(student => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student.firstName} {student.lastName} ({student.dni}) - {student.grade} &quot;{student.section}&quot;
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {availableStudents.length > 0 && filteredStudentsForDropdown.length === 0 && studentSearchTerm && (
+                <p className="text-sm text-muted-foreground mt-1">Ningún estudiante coincide con los filtros aplicados.</p>
+            )}
+             {availableStudents.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-1">No hay estudiantes en esta sede. Agregue estudiantes primero.</p>
             )}
           </div>
+          
+          {/* Grade Table Search (for selected student's grades) */}
+          {selectedStudentId && (
+            <div className="mb-4">
+              <Label htmlFor="grade-search-table">Buscar en Notas del Estudiante (Materia, Nota, Periodo)</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="grade-search-table"
+                  type="search"
+                  placeholder="Ej: Matemáticas, 15, Bimestre 1..."
+                  value={gradeSearchTerm}
+                  onChange={(e) => setGradeSearchTerm(e.target.value)}
+                  className="pl-8 w-full"
+                />
+              </div>
+            </div>
+          )}
 
           {selectedStudentId ? (
             filteredGrades.length > 0 ? (
@@ -291,18 +370,18 @@ export default function GradesPage() {
               <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
                 <BookOpen className="h-16 w-16 text-muted-foreground" />
                 <p className="text-muted-foreground text-lg mt-4">
-                  {searchTerm ? "No se encontraron notas con ese criterio." : "No hay notas registradas para este estudiante."}
+                  {gradeSearchTerm ? "No se encontraron notas con ese criterio para el estudiante." : `No hay notas registradas para ${selectedStudentName}.`}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {searchTerm ? "Intente con otros términos." : "Agregue una nueva nota para comenzar."}
+                  {gradeSearchTerm ? "Intente con otros términos." : "Agregue una nueva nota para comenzar."}
                 </p>
               </div>
             )
           ) : (
-             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
+             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50 mt-6">
                 <Users className="h-16 w-16 text-muted-foreground" />
                 <p className="text-muted-foreground text-lg mt-4">Seleccione un estudiante</p>
-                <p className="text-sm text-muted-foreground mt-2">Elija un estudiante de la lista para ver o agregar notas.</p>
+                <p className="text-sm text-muted-foreground mt-2">Utilice los filtros de arriba para encontrar y seleccionar un estudiante.</p>
               </div>
           )}
         </CardContent>
