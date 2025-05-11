@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Building2, Loader2, UploadCloud } from "lucide-react";
+import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Building2, Loader2, UploadCloud, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,8 +23,9 @@ import { useCampusContext } from "@/contexts/CampusContext";
 import Link from "next/link";
 import StudentImportDialog from "@/components/StudentImportDialog";
 
-const gradeOptions = ["Kinder", "1ro", "2do", "3ro", "4to", "5to"]; 
-const sectionOptions = ["A", "B", "C", "D", "E"];
+const gradeOptions = ["Todos", "Kinder", "1ro", "2do", "3ro", "4to", "5to"]; 
+const sectionOptions = ["Todas", "A", "B", "C", "D", "E"];
+const levelOptions = ["Todos", "Inicial", "Primaria", "Secundaria"];
 
 const studentSchema = z.object({
   dni: z.string().min(8, "El DNI debe tener al menos 8 caracteres.").max(15, "El DNI no debe exceder los 15 caracteres."),
@@ -35,10 +36,11 @@ const studentSchema = z.object({
   level: z.enum(['Inicial', 'Primaria', 'Secundaria'], { required_error: "El nivel es requerido." }),
   shift: z.enum(['Mañana', 'Tarde'], { required_error: "El turno es requerido." }),
   guardianPhoneNumber: z.string().regex(/^\d{7,15}$/, "Número de celular inválido.").optional().or(z.literal('')),
-  // campusId: z.string().min(1, "La sede es requerida."), // Will be auto-filled from selectedCampus
 });
 
 type StudentFormData = z.infer<typeof studentSchema>;
+
+const ITEMS_PER_PAGE = 10;
 
 export default function StudentsPage() {
   const { students, addStudent, updateStudent, deleteStudent, isLoaded: studentsLoaded, addMultipleStudents } = useStudentContext();
@@ -48,6 +50,10 @@ export default function StudentsPage() {
   const [editingStudent, setEditingStudent] = useState<LegacyStudent | null>(null); 
   const [viewingStudent, setViewingStudent] = useState<LegacyStudent | null>(null); 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>("Todos");
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>("Todas");
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState<string>("Todos");
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
   const form = useForm<StudentFormData>({
@@ -141,13 +147,40 @@ export default function StudentsPage() {
     setIsImportModalOpen(false);
   };
 
+  const studentsForSelectedCampus = useMemo(() => {
+    return selectedCampus ? students : [];
+  }, [students, selectedCampus]);
 
-  // TODO: Filter students by selectedCampus.id once student data includes campusId
-  const filteredStudents = students.filter(student =>
-    // (student.campusId === selectedCampus?.id) && // Uncomment when campusId is available
-    (`${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.dni.includes(searchTerm))
-  );
+  const fullyFilteredStudents = useMemo(() => {
+    setCurrentPage(1); // Reset to first page on search or filter change
+    return studentsForSelectedCampus.filter(student =>
+      (selectedGradeFilter === "Todos" || student.grade === selectedGradeFilter) &&
+      (selectedSectionFilter === "Todas" || student.section === selectedSectionFilter) &&
+      (selectedLevelFilter === "Todos" || student.level === selectedLevelFilter) &&
+      (`${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       (student.dni && student.dni.toLowerCase().includes(searchTerm.toLowerCase())))
+    );
+  }, [studentsForSelectedCampus, searchTerm, selectedGradeFilter, selectedSectionFilter, selectedLevelFilter]);
+
+  const totalPages = Math.ceil(fullyFilteredStudents.length / ITEMS_PER_PAGE);
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return fullyFilteredStudents.slice(startIndex, endIndex);
+  }, [fullyFilteredStudents, currentPage]);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
 
   if (campusLoading || !studentsLoaded) {
     return (
@@ -202,66 +235,147 @@ export default function StudentsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex items-center gap-2">
-            <Search className="text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nombre o DNI..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-          {filteredStudents.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>DNI</TableHead>
-                    <TableHead>Nombre Completo</TableHead>
-                    <TableHead>Grado</TableHead>
-                    <TableHead>Sección</TableHead>
-                    <TableHead>Nivel</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell>{student.dni}</TableCell>
-                      <TableCell>{student.firstName} {student.lastName}</TableCell>
-                      <TableCell>{student.grade}</TableCell>
-                      <TableCell>{student.section}</TableCell>
-                      <TableCell>{student.level}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-5 w-5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openViewModal(student)}>
-                              <Eye className="mr-2 h-4 w-4" /> Ver
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditModal(student)}>
-                              <Edit className="mr-2 h-4 w-4" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(student.id)} className="text-destructive-foreground bg-destructive hover:bg-destructive/90 focus:bg-destructive/90">
-                              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          <div className="mb-6 p-4 border rounded-md shadow-sm bg-muted/20">
+            <h3 className="text-lg font-semibold mb-3 text-primary flex items-center">
+              <Filter className="mr-2 h-5 w-5" />
+              Filtrar Estudiantes
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="lg:col-span-1">
+                <Label htmlFor="student-search-input">Buscar (Nombre/DNI)</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="student-search-input"
+                    placeholder="Ej: Ana García o 123..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="grade-filter-select">Grado</Label>
+                <Select value={selectedGradeFilter} onValueChange={setSelectedGradeFilter}>
+                  <SelectTrigger id="grade-filter-select">
+                    <SelectValue placeholder="Todos los grados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gradeOptions.map(grade => (
+                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="section-filter-select">Sección</Label>
+                <Select value={selectedSectionFilter} onValueChange={setSelectedSectionFilter}>
+                  <SelectTrigger id="section-filter-select">
+                    <SelectValue placeholder="Todas las secciones" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sectionOptions.map(section => (
+                      <SelectItem key={section} value={section}>{section}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="level-filter-select">Nivel</Label>
+                <Select value={selectedLevelFilter} onValueChange={setSelectedLevelFilter}>
+                  <SelectTrigger id="level-filter-select">
+                    <SelectValue placeholder="Todos los niveles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {levelOptions.map(level => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+          </div>
+
+          {paginatedStudents.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>DNI</TableHead>
+                      <TableHead>Nombre Completo</TableHead>
+                      <TableHead>Grado</TableHead>
+                      <TableHead>Sección</TableHead>
+                      <TableHead>Nivel</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedStudents.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell>{student.dni}</TableCell>
+                        <TableCell>{student.firstName} {student.lastName}</TableCell>
+                        <TableCell>{student.grade}</TableCell>
+                        <TableCell>{student.section}</TableCell>
+                        <TableCell>{student.level}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-5 w-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openViewModal(student)}>
+                                <Eye className="mr-2 h-4 w-4" /> Ver
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditModal(student)}>
+                                <Edit className="mr-2 h-4 w-4" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDelete(student.id)} className="text-destructive-foreground bg-destructive hover:bg-destructive/90 focus:bg-destructive/90">
+                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-end gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                        aria-label="Página anterior"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                        Página {currentPage} de {totalPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        aria-label="Siguiente página"
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card/50">
               <Users className="h-16 w-16 text-muted-foreground" />
               <p className="text-muted-foreground text-lg mt-4">
-                {searchTerm ? "No se encontraron estudiantes con ese criterio." : "No hay estudiantes registrados en esta sede."}
+                {searchTerm || selectedGradeFilter !== "Todos" || selectedSectionFilter !== "Todas" || selectedLevelFilter !== "Todos" 
+                  ? "No se encontraron estudiantes con los filtros aplicados." 
+                  : "No hay estudiantes registrados en esta sede."}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 Agregue un nuevo estudiante para comenzar o importe desde un archivo Excel.
@@ -337,7 +451,7 @@ export default function StudentsPage() {
                           <SelectValue placeholder="Seleccione grado" />
                         </SelectTrigger>
                         <SelectContent>
-                          {gradeOptions.map(option => (
+                          {gradeOptions.filter(g => g !== "Todos").map(option => (
                             <SelectItem key={option} value={option}>{option}</SelectItem>
                           ))}
                         </SelectContent>
@@ -357,7 +471,7 @@ export default function StudentsPage() {
                           <SelectValue placeholder="Seleccione sección" />
                         </SelectTrigger>
                         <SelectContent>
-                          {sectionOptions.map(option => (
+                          {sectionOptions.filter(s => s !== "Todas").map(option => (
                             <SelectItem key={option} value={option}>{option}</SelectItem>
                           ))}
                         </SelectContent>
@@ -428,3 +542,4 @@ export default function StudentsPage() {
     </DashboardLayout>
   );
 }
+
