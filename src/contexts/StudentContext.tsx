@@ -8,6 +8,7 @@ import type { LegacyStudent } from '@/types'; // Updated import
 interface StudentContextType {
   students: LegacyStudent[]; // Updated type
   addStudent: (student: Omit<LegacyStudent, 'id'>) => void; // Updated type
+  addMultipleStudents: (students: Omit<LegacyStudent, 'id'>[]) => void;
   updateStudent: (student: LegacyStudent) => void; // Updated type
   deleteStudent: (studentId: string) => void;
   getStudentById: (studentId: string) => LegacyStudent | undefined; // Updated type
@@ -52,6 +53,26 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     setStudents(prevStudents => [...prevStudents, newStudent]);
   };
 
+  const addMultipleStudents = (studentsData: Omit<LegacyStudent, 'id'>[]) => {
+    const newStudents = studentsData.map(studentData => ({
+      ...studentData,
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}-${studentData.dni}` // Ensure some uniqueness for batch
+    }));
+    setStudents(prevStudents => {
+      const updatedStudents = [...prevStudents];
+      newStudents.forEach(newStudent => {
+        const existingIndex = updatedStudents.findIndex(s => s.dni === newStudent.dni);
+        if (existingIndex > -1) {
+          // Optionally update existing student or skip. For now, let's update.
+          updatedStudents[existingIndex] = { ...updatedStudents[existingIndex], ...newStudent, id: updatedStudents[existingIndex].id };
+        } else {
+          updatedStudents.push(newStudent);
+        }
+      });
+      return updatedStudents;
+    });
+  };
+
   const updateStudent = (updatedStudent: LegacyStudent) => { // Updated type
     setStudents(prevStudents =>
       prevStudents.map(s => (s.id === updatedStudent.id ? updatedStudent : s))
@@ -67,7 +88,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <StudentContext.Provider value={{ students, addStudent, updateStudent, deleteStudent, getStudentById, isLoaded }}>
+    <StudentContext.Provider value={{ students, addStudent, addMultipleStudents, updateStudent, deleteStudent, getStudentById, isLoaded }}>
       {children}
     </StudentContext.Provider>
   );
@@ -80,3 +101,4 @@ export const useStudentContext = () => {
   }
   return context;
 };
+

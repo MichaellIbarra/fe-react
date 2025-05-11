@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Building2, Loader2 } from "lucide-react";
+import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Building2, Loader2, UploadCloud } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useStudentContext } from "@/contexts/StudentContext";
 import { useCampusContext } from "@/contexts/CampusContext";
 import Link from "next/link";
+import StudentImportDialog from "@/components/StudentImportDialog";
 
 const gradeOptions = ["Kinder", "1ro", "2do", "3ro", "4to", "5to"]; 
 const sectionOptions = ["A", "B", "C", "D", "E"];
@@ -40,9 +41,10 @@ const studentSchema = z.object({
 type StudentFormData = z.infer<typeof studentSchema>;
 
 export default function StudentsPage() {
-  const { students, addStudent, updateStudent, deleteStudent, isLoaded: studentsLoaded } = useStudentContext();
-  const { selectedCampus, isLoadingSelection: campusLoading, campuses } = useCampusContext();
+  const { students, addStudent, updateStudent, deleteStudent, isLoaded: studentsLoaded, addMultipleStudents } = useStudentContext();
+  const { selectedCampus, isLoadingSelection: campusLoading } = useCampusContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<LegacyStudent | null>(null); 
   const [viewingStudent, setViewingStudent] = useState<LegacyStudent | null>(null); 
   const [searchTerm, setSearchTerm] = useState("");
@@ -123,6 +125,22 @@ export default function StudentsPage() {
     setEditingStudent(null);
     setIsModalOpen(true);
   };
+  
+  const handleImportStudents = (importedStudents: Omit<LegacyStudent, 'id'>[]) => {
+    if (!selectedCampus) {
+      toast({ variant: "destructive", title: "Error de Importación", description: "No hay una sede seleccionada para asignar los estudiantes." });
+      return;
+    }
+    // TODO: Add campusId to each student if your student model requires it
+    // const studentsWithCampusId = importedStudents.map(s => ({ ...s, campusId: selectedCampus.id }));
+    addMultipleStudents(importedStudents); // Use importedStudents for now
+    toast({
+      title: "Importación Exitosa",
+      description: `${importedStudents.length} estudiantes han sido agregados/actualizados.`,
+    });
+    setIsImportModalOpen(false);
+  };
+
 
   // TODO: Filter students by selectedCampus.id once student data includes campusId
   const filteredStudents = students.filter(student =>
@@ -162,7 +180,7 @@ export default function StudentsPage() {
   return (
     <DashboardLayout>
       <Card className="w-full shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Users className="h-10 w-10 text-primary" />
             <div>
@@ -172,10 +190,16 @@ export default function StudentsPage() {
               </CardDescription>
             </div>
           </div>
-          <Button onClick={openAddModal}>
-            <PlusCircle className="mr-2 h-5 w-5" />
-            Agregar Estudiante
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <Button onClick={openAddModal} className="w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Agregar Estudiante
+            </Button>
+            <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="w-full sm:w-auto">
+              <UploadCloud className="mr-2 h-5 w-5" />
+              Importar desde Excel
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex items-center gap-2">
@@ -240,7 +264,7 @@ export default function StudentsPage() {
                 {searchTerm ? "No se encontraron estudiantes con ese criterio." : "No hay estudiantes registrados en esta sede."}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Agregue un nuevo estudiante para comenzar.
+                Agregue un nuevo estudiante para comenzar o importe desde un archivo Excel.
               </p>
             </div>
           )}
@@ -395,6 +419,13 @@ export default function StudentsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <StudentImportDialog
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={handleImportStudents}
+      />
     </DashboardLayout>
   );
 }
+
