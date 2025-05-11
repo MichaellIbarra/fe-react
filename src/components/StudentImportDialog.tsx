@@ -87,7 +87,8 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
       EXPECTED_HEADERS.forEach(expectedHeader => {
         const foundIndex = headers.findIndex(h => {
             if (expectedHeader === "sección") return h.includes("secci"); 
-            if (expectedHeader === "celular apoderado") return h.includes("celular") && (h.includes("apoderado") || h.includes("tutor"));
+            if (expectedHeader === "celular apoderado") return (h.includes("celular") || h.includes("telefono") || h.includes("teléfono")) && (h.includes("apoderado") || h.includes("tutor"));
+            if (expectedHeader === "nombres") return h === "nombres" || h === "nombre";
             return h === expectedHeader;
         });
         if (foundIndex !== -1) {
@@ -96,8 +97,8 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
       });
 
       const missingHeaders = EXPECTED_HEADERS.filter(eh => !(eh in headerMap) && eh !== "celular apoderado"); 
-       if (missingHeaders.length > 0 && !(missingHeaders.length === 1 && missingHeaders[0] === "celular apoderado")) {
-         const requiredMissing = missingHeaders.filter(h => h !== "celular apoderado");
+       if (missingHeaders.length > 0) {
+         const requiredMissing = missingHeaders.filter(h => h !== "celular apoderado"); // "celular apoderado" is optional
          if (requiredMissing.length > 0) {
             throw new Error(`Faltan los siguientes encabezados requeridos: ${requiredMissing.join(', ')}. Encabezados encontrados: ${headers.join(', ')}`);
          }
@@ -113,16 +114,17 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
 
         const student: Partial<Omit<LegacyStudent, 'id'>> = {};
         student.dni = String(row[headerMap["dni"]] || '').trim();
-        student.firstName = String(row[headerMap["nombres"]] || '').trim();
+        student.firstName = String(row[headerMap["nombres"]] || '').trim(); // This will use "nombres" which now maps to "nombre" or "nombres"
         student.lastName = String(row[headerMap["apellidos"]] || '').trim();
         student.grade = String(row[headerMap["grado"]] || '').trim();
         student.section = String(row[headerMap["sección"]] || '').trim().toUpperCase();
         student.level = String(row[headerMap["nivel"]] || '').trim() as LegacyStudent['level'];
         student.shift = String(row[headerMap["turno"]] || '').trim() as LegacyStudent['shift'];
-        if (headerMap["celular apoderado"] !== undefined && row[headerMap["celular apoderado"]] !== undefined) {
+        
+        if (headerMap["celular apoderado"] !== undefined && row[headerMap["celular apoderado"]] !== undefined && row[headerMap["celular apoderado"]] !== null) {
             student.guardianPhoneNumber = String(row[headerMap["celular apoderado"]]).trim();
         } else {
-            student.guardianPhoneNumber = "";
+            student.guardianPhoneNumber = ""; // Default to empty string if header or value is missing
         }
 
 
