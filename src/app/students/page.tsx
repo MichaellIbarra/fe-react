@@ -367,7 +367,7 @@ export default function StudentsPage() {
                   {form.formState.errors.section && <p className="text-destructive text-sm mt-1">{form.formState.errors.section.message}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="level">Nivel Educativo</Label>
+                  <Label htmlFor="level">Nivel</Label>
                   <Controller
                     control={form.control}
                     name="level"
@@ -428,4 +428,3 @@ export default function StudentsPage() {
     </DashboardLayout>
   );
 }
-
