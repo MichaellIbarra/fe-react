@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -28,26 +27,37 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const resetState = () => {
-    setSelectedFile(null);
+  const resetStateForNewFileOrClose = () => {
     setParsedStudents([]);
     setErrorMessages([]);
     setIsLoading(false);
-    // Reset file input visually
+  };
+
+  const clearSelectedFileAndInput = () => {
+    setSelectedFile(null);
     const fileInput = document.getElementById('excel-file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    resetState(); // Reset if a new file is chosen
+    resetStateForNewFileOrClose(); // Clear previous processing results and errors
+    
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || file.type === "application/vnd.ms-excel" || file.type === "text/csv") {
+      const isValidExcel = file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || file.type === "application/vnd.ms-excel";
+      const isValidCsvByName = file.name.toLowerCase().endsWith(".csv");
+      const isGenericTypeForCsv = file.type === "" || file.type === "application/octet-stream" || file.type === "text/csv";
+
+      if (isValidExcel || (isValidCsvByName && isGenericTypeForCsv)) {
         setSelectedFile(file);
       } else {
-        setErrorMessages(["Formato de archivo no válido. Por favor, suba un archivo .xlsx, .xls o .csv."]);
-        setSelectedFile(null);
+        setErrorMessages([`Formato de archivo no válido: ${file.name} (tipo: ${file.type || 'desconocido'}). Por favor, suba un archivo .xlsx, .xls o .csv.`]);
+        clearSelectedFileAndInput(); // Clear if invalid
       }
+    } else {
+      // No file selected (e.g., user cancelled file dialog)
+      clearSelectedFileAndInput();
     }
   };
 
@@ -57,8 +67,8 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
       return;
     }
     setIsLoading(true);
-    setErrorMessages([]);
-    setParsedStudents([]);
+    setErrorMessages([]); // Clear previous errors before processing new file
+    setParsedStudents([]); // Clear previous students
 
     try {
       const data = await selectedFile.arrayBuffer();
@@ -76,7 +86,7 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
       const headerMap: Record<string, number> = {};
       EXPECTED_HEADERS.forEach(expectedHeader => {
         const foundIndex = headers.findIndex(h => {
-            if (expectedHeader === "sección") return h.includes("secci"); // Flexible for "sección" or "seccion"
+            if (expectedHeader === "sección") return h.includes("secci"); 
             if (expectedHeader === "celular apoderado") return h.includes("celular") && (h.includes("apoderado") || h.includes("tutor"));
             return h === expectedHeader;
         });
@@ -85,7 +95,7 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
         }
       });
 
-      const missingHeaders = EXPECTED_HEADERS.filter(eh => !(eh in headerMap) && eh !== "celular apoderado"); // Celular is optional
+      const missingHeaders = EXPECTED_HEADERS.filter(eh => !(eh in headerMap) && eh !== "celular apoderado"); 
        if (missingHeaders.length > 0 && !(missingHeaders.length === 1 && missingHeaders[0] === "celular apoderado")) {
          const requiredMissing = missingHeaders.filter(h => h !== "celular apoderado");
          if (requiredMissing.length > 0) {
@@ -99,7 +109,7 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
 
       for (let i = 1; i < jsonData.length; i++) {
         const row = jsonData[i];
-        if (row.every(cell => cell === null || cell === undefined || String(cell).trim() === "")) continue;
+        if (!row || row.every(cell => cell === null || cell === undefined || String(cell).trim() === "")) continue;
 
         const student: Partial<Omit<LegacyStudent, 'id'>> = {};
         student.dni = String(row[headerMap["dni"]] || '').trim();
@@ -109,8 +119,8 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
         student.section = String(row[headerMap["sección"]] || '').trim().toUpperCase();
         student.level = String(row[headerMap["nivel"]] || '').trim() as LegacyStudent['level'];
         student.shift = String(row[headerMap["turno"]] || '').trim() as LegacyStudent['shift'];
-        if (headerMap["celular apoderado"] !== undefined) {
-            student.guardianPhoneNumber = String(row[headerMap["celular apoderado"]] || '').trim();
+        if (headerMap["celular apoderado"] !== undefined && row[headerMap["celular apoderado"]] !== undefined) {
+            student.guardianPhoneNumber = String(row[headerMap["celular apoderado"]]).trim();
         } else {
             student.guardianPhoneNumber = "";
         }
@@ -129,7 +139,7 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
           currentErrors.push(`Fila ${i + 1} (DNI ${student.dni}): Turno '${student.shift}' no válido. Use 'Mañana' o 'Tarde'.`);
           continue;
         }
-        if (student.guardianPhoneNumber && !/^\d{7,15}$/.test(student.guardianPhoneNumber)) {
+        if (student.guardianPhoneNumber && !/^\d{7,15}$/.test(student.guardianPhoneNumber) && student.guardianPhoneNumber !== "") {
             currentErrors.push(`Fila ${i + 1} (DNI ${student.dni}): Número de celular del apoderado '${student.guardianPhoneNumber}' no es válido.`);
             // Allow import even if phone is invalid, but warn
         }
@@ -138,13 +148,15 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
       
       setParsedStudents(students);
       if (currentErrors.length > 0) {
-          setErrorMessages(prev => [...prev, ...currentErrors.slice(0, 5)]); // Show up to 5 specific errors
+          setErrorMessages(prev => [...prev, ...currentErrors.slice(0, 5)]); 
           if (currentErrors.length > 5) {
               setErrorMessages(prev => [...prev, `Y ${currentErrors.length - 5} errores más...`]);
           }
       }
-      if (students.length === 0 && currentErrors.length === 0) {
-         setErrorMessages(["No se encontraron estudiantes válidos en el archivo."]);
+      if (students.length === 0 && currentErrors.length === 0 && jsonData.length > 1) { // jsonData.length > 1 means there were data rows
+         setErrorMessages(["No se encontraron estudiantes válidos en el archivo después del procesamiento."]);
+      } else if (students.length === 0 && jsonData.length <=1) {
+         setErrorMessages(["El archivo no contiene filas de datos de estudiantes."]);
       }
 
 
@@ -159,7 +171,7 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
   const handleConfirmImport = () => {
     if (parsedStudents.length > 0) {
       onImport(parsedStudents);
-      handleClose();
+      handleClose(); // Close after successful import
     } else {
       toast({
         variant: "destructive",
@@ -170,7 +182,8 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
   };
 
   const handleClose = () => {
-    resetState();
+    resetStateForNewFileOrClose();
+    clearSelectedFileAndInput();
     onClose();
   };
 
@@ -194,7 +207,7 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
             <Input
               id="excel-file-input"
               type="file"
-              accept=".xlsx, .xls, .csv"
+              accept=".xlsx,.xls,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
               onChange={handleFileChange}
               className="mt-1"
               disabled={isLoading}
@@ -213,16 +226,25 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
             </Alert>
           )}
 
-          {parsedStudents.length > 0 && !isLoading && (
+          {parsedStudents.length > 0 && !isLoading && errorMessages.length === 0 && (
              <Alert variant="default" className="bg-accent/10 border-accent">
                 <CheckCircle className="h-4 w-4 text-accent" />
-                <AlertTitle>Archivo Procesado</AlertTitle>
+                <AlertTitle>Archivo Procesado Exitosamente</AlertTitle>
                 <AlertDescription>
                     Se han encontrado {parsedStudents.length} estudiantes listos para importar.
-                    {errorMessages.length > 0 && ` (${errorMessages.filter(e => !e.startsWith("Y ")).length} filas con advertencias/errores fueron omitidas o notificadas).`}
                 </AlertDescription>
              </Alert>
           )}
+           {parsedStudents.length > 0 && !isLoading && errorMessages.length > 0 && (
+             <Alert variant="default" className="bg-yellow-500/10 border-yellow-500">
+                <Info className="h-4 w-4 text-yellow-600" />
+                <AlertTitle>Archivo Procesado con Advertencias</AlertTitle>
+                <AlertDescription>
+                    Se han encontrado {parsedStudents.length} estudiantes para importar, pero algunas filas tuvieron problemas (ver errores arriba).
+                </AlertDescription>
+             </Alert>
+          )}
+
 
            {selectedFile && parsedStudents.length === 0 && !isLoading && errorMessages.length === 0 && (
              <Alert variant="default">
@@ -258,3 +280,4 @@ const StudentImportDialog: React.FC<StudentImportDialogProps> = ({ isOpen, onClo
 };
 
 export default StudentImportDialog;
+
