@@ -88,7 +88,6 @@ const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
                 <AvatarImage 
                     src={studentPhotoSeed ? `https://picsum.photos/seed/${studentPhotoSeed}/112/112` : `https://picsum.photos/seed/${studentDni}/112/112`} 
                     alt={studentName}
-                    data-ai-hint="student photo"
                 />
                 <AvatarFallback className="text-3xl bg-primary/10 text-primary font-semibold">
                     {studentInitials}
@@ -134,3 +133,4 @@ const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
 };
 
 export default QrCodeDisplay;
+
