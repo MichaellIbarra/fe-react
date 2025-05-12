@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ChangeEvent } from 'react';
@@ -50,6 +51,7 @@ export default function NotificationsPage() {
       if (name === "studentId" && value.studentId) {
         const student = getStudentById(value.studentId);
         setSelectedStudent(student || null);
+        setResult(null); // Clear previous result when student changes
       }
     });
     return () => subscription.unsubscribe();
@@ -74,7 +76,6 @@ export default function NotificationsPage() {
       const aiResult = await sendGuardianNotification({
         studentId: selectedStudent.id,
         studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
-        // Ensure guardianPhoneNumber is a string, even if optional in LegacyStudent type
         guardianPhoneNumber: selectedStudent.guardianPhoneNumber || "N/A", 
         messageContent: values.messageContent,
       });
@@ -96,8 +97,7 @@ export default function NotificationsPage() {
     }
   }
   
-  // TODO: Filter students by selectedCampus.id once student data includes campusId
-  const studentsForSelectedCampus = selectedCampus ? students : []; // Placeholder
+  const studentsForSelectedCampus = selectedCampus ? students : [];
 
   if (!studentsLoaded || campusLoading) {
     return (
@@ -113,7 +113,7 @@ export default function NotificationsPage() {
   if (!selectedCampus) {
      return (
       <DashboardLayout>
-        <Card className="text-center">
+        <Card className="text-center max-w-lg mx-auto">
           <CardHeader>
             <Building2 className="mx-auto h-12 w-12 text-primary mb-4" />
             <CardTitle>No hay Sede Seleccionada</CardTitle>
@@ -129,8 +129,8 @@ export default function NotificationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="shadow-lg lg:col-span-2">
+      <div className="space-y-8 max-w-3xl mx-auto">
+        <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center gap-4">
             <MessageSquare className="h-10 w-10 text-primary" />
             <div>
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Elija un estudiante..." />
+                            <SelectValue placeholder={studentsForSelectedCampus.length === 0 ? "No hay estudiantes en esta sede" : "Elija un estudiante..."} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -169,7 +169,7 @@ export default function NotificationsPage() {
                         </SelectContent>
                       </Select>
                       {studentsForSelectedCampus.length === 0 && (
-                        <p className="text-sm text-muted-foreground mt-1">No hay estudiantes en esta sede.</p>
+                        <p className="text-sm text-muted-foreground mt-1">Agregue estudiantes en la sección de Gestión de Estudiantes para esta sede.</p>
                       )}
                       <FormMessage />
                     </FormItem>
@@ -179,9 +179,10 @@ export default function NotificationsPage() {
                 {selectedStudent && (
                   <Alert variant="default" className="bg-primary/5 border-primary/30">
                     <Info className="h-5 w-5 text-primary" />
-                    <AlertTitle className="text-primary font-semibold">Información del Apoderado</AlertTitle>
-                    <AlertDescription>
+                    <AlertTitle className="text-primary font-semibold">Información del Estudiante y Apoderado</AlertTitle>
+                    <AlertDescription className="space-y-1">
                       <p><strong>Estudiante:</strong> {selectedStudent.firstName} {selectedStudent.lastName}</p>
+                      <p><strong>Grado y Sección:</strong> {selectedStudent.grade} &quot;{selectedStudent.section}&quot; ({selectedStudent.level})</p>
                       <p><strong>Celular Apoderado:</strong> {selectedStudent.guardianPhoneNumber || "No registrado"}</p>
                       <p className="text-xs mt-1">Este es el número al que se "enviará" la notificación (simulación).</p>
                     </AlertDescription>
@@ -229,23 +230,23 @@ export default function NotificationsPage() {
         </Card>
 
         {result && (
-          <Card className="shadow-lg lg:col-span-1">
+          <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Resultado del Envío</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Alert variant={result.success ? "default" : "destructive"} className={result.success ? "bg-accent/10 border-accent" : ""}>
+              <Alert variant={result.success ? "default" : "destructive"} className={result.success ? "bg-accent/10 border-accent text-accent-foreground" : ""}>
                 {result.success ? <CheckCircle className="h-5 w-5 text-accent" /> : <AlertTriangle className="h-5 w-5 text-destructive" />}
-                <AlertTitle>{result.success ? "Envío Exitoso (Simulado)" : "Error en el Envío"}</AlertTitle>
+                <AlertTitle className={result.success ? "text-accent" : ""}>{result.success ? "Envío Exitoso (Simulado)" : "Error en el Envío"}</AlertTitle>
                 <AlertDescription>{result.confirmationMessage}</AlertDescription>
               </Alert>
               
               {result.success && result.details && (
-                <div className="text-sm space-y-1 p-3 bg-muted/50 rounded-md">
+                <div className="text-sm space-y-1 p-4 bg-muted/50 rounded-md border border-border">
                   <p><strong>Para:</strong> Apoderado de {result.details.studentName}</p>
                   <p><strong>Contacto:</strong> {result.details.guardianPhoneNumber}</p>
                   <p><strong>Mensaje:</strong> &quot;{result.details.messageContent}&quot;</p>
-                  <p><strong>Fecha y Hora (Log):</strong> {new Date(result.details.timestamp).toLocaleString()}</p>
+                  <p><strong>Fecha y Hora (Log):</strong> {new Date(result.details.timestamp).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                 </div>
               )}
             </CardContent>
@@ -255,3 +256,5 @@ export default function NotificationsPage() {
     </DashboardLayout>
   );
 }
+
+    
