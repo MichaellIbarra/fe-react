@@ -1,19 +1,18 @@
+
 "use client";
 
 import React, { useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import QRCode from 'qrcode.react';
-import { Download, UserCircle, Fingerprint } from 'lucide-react'; // Added UserCircle and Fingerprint for DNI style
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // For photo placeholder
+import { Download, Fingerprint } from 'lucide-react'; 
 
 interface QrCodeDisplayProps {
   isOpen: boolean;
   onClose: () => void;
   qrValue: string;
   studentName: string;
-  studentDni?: string; // Optional DNI for display
-  studentPhotoSeed?: string; // Optional seed for placeholder photo
+  studentDni?: string; 
 }
 
 const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({ 
@@ -22,10 +21,9 @@ const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
     qrValue, 
     studentName, 
     studentDni = "N/A", 
-    studentPhotoSeed 
 }) => {
-  const qrCodeCanvasRef = useRef<HTMLDivElement>(null); // For downloading the QR code itself
-  const dniCardRef = useRef<HTMLDivElement>(null); // For downloading the entire DNI card (optional, more complex)
+  const qrCodeCanvasRef = useRef<HTMLDivElement>(null); 
+  const dniCardRef = useRef<HTMLDivElement>(null); 
 
   if (!isOpen) return null;
 
@@ -47,16 +45,6 @@ const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
     }
   };
   
-  // Note: Downloading the entire DNI card as an image is more complex 
-  // and might require a library like html2canvas if not using a canvas for the DNI card itself.
-  // For now, we'll keep the download button for the QR code only.
-
-  const studentInitials = studentName
-    .split(' ')
-    .map(name => name[0])
-    .join('')
-    .substring(0, 2)
-    .toUpperCase();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -82,19 +70,6 @@ const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 items-center">
-            {/* Student Photo Placeholder */}
-            <div className="flex-shrink-0">
-              <Avatar className="h-28 w-28 border-4 border-primary/50 shadow-md">
-                <AvatarImage 
-                    src={studentPhotoSeed ? `https://picsum.photos/seed/${studentPhotoSeed}/112/112` : `https://picsum.photos/seed/${studentDni}/112/112`} 
-                    alt={studentName}
-                />
-                <AvatarFallback className="text-3xl bg-primary/10 text-primary font-semibold">
-                    {studentInitials}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-
             {/* Student Info and QR */}
             <div className="flex-1 space-y-3">
               <div>
