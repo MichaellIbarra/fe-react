@@ -178,7 +178,6 @@ const QrScannerModalContent: React.FC<QrScannerModalContentProps> = ({ selectedD
             onScanFailure={handleScanFailure}
             qrboxSize={200} 
             fps={5}
-            html5QrCodeRef={html5QrCodeRef}
           />
         </div>
       )}
@@ -235,7 +234,7 @@ export default function AttendancePage() {
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isQrScannerModalOpen, setIsQrScannerModalOpen] = useState(false);
-  const [selectedStudentForQr, setSelectedStudentForQr] = useState<Pick<LegacyStudent, "id" | "firstName" | "lastName"> | null>(null);
+  const [selectedStudentForQr, setSelectedStudentForQr] = useState<LegacyStudent | null>(null);
   const [qrValue, setQrValue] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -302,7 +301,7 @@ export default function AttendancePage() {
     });
   };
 
-  const handleShowQr = (student: Pick<LegacyStudent, "id" | "firstName" | "lastName">) => {
+  const handleShowQr = (student: LegacyStudent) => {
     setSelectedStudentForQr(student);
     const qrData = {
       type: "eduassist_student_id",
@@ -570,6 +569,8 @@ export default function AttendancePage() {
           onClose={() => setIsQrModalOpen(false)}
           qrValue={qrValue}
           studentName={`${selectedStudentForQr.firstName} ${selectedStudentForQr.lastName}`}
+          studentDni={selectedStudentForQr.dni}
+          studentPhotoSeed={selectedStudentForQr.dni} // Use DNI as seed for picsum
         />
       )}
     </DashboardLayout>
