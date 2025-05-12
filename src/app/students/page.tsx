@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Building2, Loader2, UploadCloud, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Users, PlusCircle, Edit, Trash2, Eye, MoreVertical, Search, Building2, Loader2, UploadCloud, ChevronLeft, ChevronRight, Filter, UserSquare, Phone, GraduationCap, UserCheck, Tag, Briefcase } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -393,9 +393,9 @@ export default function StudentsPage() {
             form.reset(); 
           }
       }}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>{viewingStudent ? "Detalles del Estudiante" : editingStudent ? "Editar Estudiante" : "Agregar Estudiante"}</DialogTitle>
+            <DialogTitle className="text-2xl">{viewingStudent ? "Detalles del Estudiante" : editingStudent ? "Editar Estudiante" : "Agregar Estudiante"}</DialogTitle>
             {viewingStudent ? (
               <DialogDescription>
                 Información detallada del estudiante {viewingStudent.firstName} {viewingStudent.lastName}.
@@ -407,125 +407,158 @@ export default function StudentsPage() {
             )}
           </DialogHeader>
           {viewingStudent ? (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                <div><Label>DNI:</Label><p className="text-sm">{viewingStudent.dni}</p></div>
-                <div><Label>Nombres:</Label><p className="text-sm">{viewingStudent.firstName}</p></div>
-                <div><Label>Apellidos:</Label><p className="text-sm">{viewingStudent.lastName}</p></div>
-                <div><Label>Grado:</Label><p className="text-sm">{viewingStudent.grade}</p></div>
-                <div><Label>Sección:</Label><p className="text-sm">{viewingStudent.section}</p></div>
-                <div><Label>Nivel:</Label><p className="text-sm">{viewingStudent.level}</p></div>
-                <div><Label>Turno:</Label><p className="text-sm">{viewingStudent.shift}</p></div>
-                <div><Label>Celular Apoderado:</Label><p className="text-sm">{viewingStudent.guardianPhoneNumber || "No registrado"}</p></div>
-              </div>
-               <DialogFooter>
+            <div className="space-y-6 py-4">
+              <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-xl text-primary flex items-center gap-2"><UserSquare className="h-6 w-6"/> Datos Personales</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                    <div><Label>DNI:</Label><p>{viewingStudent.dni}</p></div>
+                    <div><Label>Nombres:</Label><p>{viewingStudent.firstName}</p></div>
+                    <div><Label>Apellidos:</Label><p>{viewingStudent.lastName}</p></div>
+                </CardContent>
+              </Card>
+               <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-xl text-primary flex items-center gap-2"><GraduationCap className="h-6 w-6"/> Datos Académicos</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                    <div><Label>Grado:</Label><p>{viewingStudent.grade}</p></div>
+                    <div><Label>Sección:</Label><p>{viewingStudent.section}</p></div>
+                    <div><Label>Nivel:</Label><p>{viewingStudent.level}</p></div>
+                    <div><Label>Turno:</Label><p>{viewingStudent.shift}</p></div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-xl text-primary flex items-center gap-2"><Phone className="h-6 w-6"/> Contacto Apoderado</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-x-6 gap-y-4 text-sm">
+                    <div><Label>Celular Apoderado:</Label><p>{viewingStudent.guardianPhoneNumber || "No registrado"}</p></div>
+                </CardContent>
+              </Card>
+               <DialogFooter className="mt-4">
                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cerrar</Button>
               </DialogFooter>
             </div>
           ) : (
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="dni">DNI</Label>
-                  <Input id="dni" {...form.register("dni")} className={cn(form.formState.errors.dni && "border-destructive")} />
-                  {form.formState.errors.dni && <p className="text-destructive text-sm mt-1">{form.formState.errors.dni.message}</p>}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
+              <section className="space-y-4 p-4 border rounded-md shadow-sm">
+                <h3 className="text-lg font-semibold text-primary flex items-center gap-2"><UserCheck className="h-5 w-5"/>Identificación</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="dni">DNI</Label>
+                    <Input id="dni" {...form.register("dni")} className={cn(form.formState.errors.dni && "border-destructive")} />
+                    {form.formState.errors.dni && <p className="text-destructive text-sm mt-1">{form.formState.errors.dni.message}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="firstName">Nombres</Label>
+                    <Input id="firstName" {...form.register("firstName")} className={cn(form.formState.errors.firstName && "border-destructive")} />
+                    {form.formState.errors.firstName && <p className="text-destructive text-sm mt-1">{form.formState.errors.firstName.message}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Apellidos</Label>
+                    <Input id="lastName" {...form.register("lastName")} className={cn(form.formState.errors.lastName && "border-destructive")} />
+                    {form.formState.errors.lastName && <p className="text-destructive text-sm mt-1">{form.formState.errors.lastName.message}</p>}
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="firstName">Nombres</Label>
-                  <Input id="firstName" {...form.register("firstName")} className={cn(form.formState.errors.firstName && "border-destructive")} />
-                  {form.formState.errors.firstName && <p className="text-destructive text-sm mt-1">{form.formState.errors.firstName.message}</p>}
+              </section>
+              
+              <section className="space-y-4 p-4 border rounded-md shadow-sm">
+                 <h3 className="text-lg font-semibold text-primary flex items-center gap-2"><Tag className="h-5 w-5"/>Información Académica</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="grade">Grado</Label>
+                    <Controller
+                      control={form.control}
+                      name="grade"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
+                          <SelectTrigger id="grade" className={cn(form.formState.errors.grade && "border-destructive")}>
+                            <SelectValue placeholder="Seleccione grado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gradeOptions.filter(g => g !== "Todos").map(option => (
+                              <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {form.formState.errors.grade && <p className="text-destructive text-sm mt-1">{form.formState.errors.grade.message}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="section">Sección</Label>
+                    <Controller
+                      control={form.control}
+                      name="section"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
+                          <SelectTrigger id="section" className={cn(form.formState.errors.section && "border-destructive")}>
+                            <SelectValue placeholder="Seleccione sección" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sectionOptions.filter(s => s !== "Todas").map(option => (
+                              <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {form.formState.errors.section && <p className="text-destructive text-sm mt-1">{form.formState.errors.section.message}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="level">Nivel</Label>
+                    <Controller
+                      control={form.control}
+                      name="level"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
+                          <SelectTrigger className={cn(form.formState.errors.level && "border-destructive")}>
+                            <SelectValue placeholder="Seleccione nivel" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Inicial">Inicial</SelectItem>
+                            <SelectItem value="Primaria">Primaria</SelectItem>
+                            <SelectItem value="Secundaria">Secundaria</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {form.formState.errors.level && <p className="text-destructive text-sm mt-1">{form.formState.errors.level.message}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="shift">Turno</Label>
+                    <Controller
+                      control={form.control}
+                      name="shift"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
+                          <SelectTrigger className={cn(form.formState.errors.shift && "border-destructive")}>
+                            <SelectValue placeholder="Seleccione turno" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Mañana">Mañana</SelectItem>
+                            <SelectItem value="Tarde">Tarde</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {form.formState.errors.shift && <p className="text-destructive text-sm mt-1">{form.formState.errors.shift.message}</p>}
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="lastName">Apellidos</Label>
-                  <Input id="lastName" {...form.register("lastName")} className={cn(form.formState.errors.lastName && "border-destructive")} />
-                  {form.formState.errors.lastName && <p className="text-destructive text-sm mt-1">{form.formState.errors.lastName.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="grade">Grado</Label>
-                  <Controller
-                    control={form.control}
-                    name="grade"
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <SelectTrigger id="grade" className={cn(form.formState.errors.grade && "border-destructive")}>
-                          <SelectValue placeholder="Seleccione grado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {gradeOptions.filter(g => g !== "Todos").map(option => (
-                            <SelectItem key={option} value={option}>{option}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {form.formState.errors.grade && <p className="text-destructive text-sm mt-1">{form.formState.errors.grade.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="section">Sección</Label>
-                  <Controller
-                    control={form.control}
-                    name="section"
-                    render={({ field }) => (
-                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <SelectTrigger id="section" className={cn(form.formState.errors.section && "border-destructive")}>
-                          <SelectValue placeholder="Seleccione sección" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sectionOptions.filter(s => s !== "Todas").map(option => (
-                            <SelectItem key={option} value={option}>{option}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {form.formState.errors.section && <p className="text-destructive text-sm mt-1">{form.formState.errors.section.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="level">Nivel</Label>
-                  <Controller
-                    control={form.control}
-                    name="level"
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <SelectTrigger className={cn(form.formState.errors.level && "border-destructive")}>
-                          <SelectValue placeholder="Seleccione nivel" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Inicial">Inicial</SelectItem>
-                          <SelectItem value="Primaria">Primaria</SelectItem>
-                          <SelectItem value="Secundaria">Secundaria</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {form.formState.errors.level && <p className="text-destructive text-sm mt-1">{form.formState.errors.level.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="shift">Turno</Label>
-                  <Controller
-                    control={form.control}
-                    name="shift"
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <SelectTrigger className={cn(form.formState.errors.shift && "border-destructive")}>
-                          <SelectValue placeholder="Seleccione turno" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Mañana">Mañana</SelectItem>
-                          <SelectItem value="Tarde">Tarde</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {form.formState.errors.shift && <p className="text-destructive text-sm mt-1">{form.formState.errors.shift.message}</p>}
-                </div>
+              </section>
+
+              <section className="space-y-4 p-4 border rounded-md shadow-sm">
+                <h3 className="text-lg font-semibold text-primary flex items-center gap-2"><Briefcase className="h-5 w-5"/>Contacto Apoderado</h3>
                 <div>
                   <Label htmlFor="guardianPhoneNumber">Celular del Apoderado (Opcional)</Label>
                   <Input id="guardianPhoneNumber" {...form.register("guardianPhoneNumber")} className={cn(form.formState.errors.guardianPhoneNumber && "border-destructive")} />
                   {form.formState.errors.guardianPhoneNumber && <p className="text-destructive text-sm mt-1">{form.formState.errors.guardianPhoneNumber.message}</p>}
                 </div>
-              </div>
-              <DialogFooter>
+              </section>
+              
+              <DialogFooter className="pt-2">
                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
                 <Button type="submit">{editingStudent ? "Guardar Cambios" : "Agregar Estudiante"}</Button>
               </DialogFooter>
@@ -542,4 +575,3 @@ export default function StudentsPage() {
     </DashboardLayout>
   );
 }
-
