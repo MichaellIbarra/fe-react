@@ -119,6 +119,13 @@ const Auth = () => {
                             Teacher
                           </Link>
                         </div>
+                        <div className="form-group login-btn">
+                          <Link to="/directors"
+                            className="btn btn-primary btn-block"
+                          >
+                            Directors
+                          </Link>
+                        </div>
                       </form>
                       {/* /Form */}
                       <div className="next-sign">

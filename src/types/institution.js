@@ -1,18 +1,53 @@
 class Institution {
   constructor(data = {}) {
-    this.institution_id = data.institution_id || null;
-    this.group_id = data.group_id || null;
-    this.institution_name = data.institution_name || '';
-    this.code_name = data.code_name || '';
-    this.institution_logo = data.institution_logo || '';
-    this.modular_code = data.modular_code || '';
-    this.institution_color = data.institution_color || '';
+    this.id = data.id || null;
+    this.institutionName = data.institutionName || '';
+    this.codeName = data.codeName || '';
+    this.institutionLogo = data.institutionLogo || '';
+    this.modularCode = data.modularCode || '';
     this.address = data.address || '';
-    this.contact_email = data.contact_email || '';
-    this.contact_phone = data.contact_phone || '';
-    this.status = data.status || '';
-    this.created_at = data.created_at ? new Date(data.created_at) : null;
-    this.updated_at = data.updated_at ? new Date(data.updated_at) : null;
+    this.contactEmail = data.contactEmail || '';
+    this.contactPhone = data.contactPhone || '';
+    this.status = data.status || 'A';
+    this.userId = data.userId || null;
+    this.uiSettings = data.uiSettings || {};
+    this.evaluationSystem = data.evaluationSystem || {};
+    this.scheduleSettings = data.scheduleSettings || {};
+    this.headquarterIds = data.headquarterIds || [];
+    this.createdAt = data.createdAt || null;
+    this.updatedAt = data.updatedAt || null;
+  }
+
+  // Método para obtener el estado legible
+  getStatusText() {
+    return this.status === 'A' ? 'Activo' : 'Inactivo';
+  }
+
+  // Método para verificar si está activo
+  isActive() {
+    return this.status === 'A';
+  }
+
+  // Método para obtener información básica
+  getBasicInfo() {
+    return {
+      id: this.id,
+      name: this.institutionName,
+      code: this.codeName,
+      email: this.contactEmail,
+      phone: this.contactPhone,
+      status: this.getStatusText()
+    };
+  }
+
+  // Método para validar campos requeridos
+  isValid() {
+    return !!(
+      this.institutionName &&
+      this.codeName &&
+      this.contactEmail &&
+      this.contactPhone
+    );
   }
 }
 

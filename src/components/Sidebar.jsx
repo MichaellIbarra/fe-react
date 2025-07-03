@@ -11,16 +11,50 @@ const Sidebar = (props) => {
   const handleClick = (e, item, item1, item3) => {
     const div = document.querySelector(`#${item}`);
     const ulDiv = document.querySelector(`.${item1}`);
-    e?.target?.className ? ulDiv.style.display = 'none' : ulDiv.style.display = 'block'
-    e?.target?.className ? div.classList.remove('subdrop') : div.classList.add('subdrop');
+    // Check if the clicked element is the link itself or an element within it
+    const isLink = e.target.tagName === 'A' || e.target.closest('a');
+
+    // Only toggle if a link was clicked and it's not one of the submenu links
+    if (isLink && !e.target.closest(`.${item1}`)) {
+      if (ulDiv.style.display === 'block') {
+        ulDiv.style.display = 'none';
+        div.classList.remove('subdrop');
+      } else {
+        // Close all other submenus before opening the current one
+        document.querySelectorAll('.sidebar-menu ul ul').forEach(ul => {
+          if (ul !== ulDiv) {
+            ul.style.display = 'none';
+            ul.closest('li.submenu')?.classList.remove('subdrop');
+          }
+        });
+        ulDiv.style.display = 'block';
+        div.classList.add('subdrop');
+      }
+    }
   }
 
   useEffect(() => {
     if (props?.id && props?.id1) {
       const ele = document.getElementById(`${props?.id}`);
-      handleClick(ele, props?.id, props?.id1);
+      // Simulate a click to open the default active submenu
+      // This might need refinement based on how activeClassName is used elsewhere
+      const defaultClickEvent = { target: ele };
+      handleClick(defaultClickEvent, props?.id, props?.id1);
     }
-  }, [])
+
+     // Find the current path and open the corresponding submenu
+     const currentPath = window.location.pathname;
+     document.querySelectorAll('.sidebar-menu a').forEach(link => {
+       if (link.pathname === currentPath) {
+         const submenuUl = link.closest('ul.submenu > ul');
+         if (submenuUl) {
+           submenuUl.style.display = 'block';
+           submenuUl.closest('li.submenu')?.classList.add('subdrop');
+         }
+       }
+     });
+
+  }, [props?.id, props?.id1])
 
 
   const expandMenu = () => {
@@ -52,7 +86,6 @@ const Sidebar = (props) => {
                 <li className="menu-title">Main</li>
                 <li className="submenu" >
                   <Link to="#" id="menu-item" onClick={(e) => {
-
                     handleClick(e, "menu-item", "menu-items")
                   }}>
                     <span className="menu-side">
@@ -62,38 +95,13 @@ const Sidebar = (props) => {
                   </Link>
                   <ul style={{ display: sidebar === 'Dashboard' ? 'block' : "none" }} className='menu-items'>
                     <li>
-                      <Link className={props?.activeClassName === 'admin-dashboard' ? 'active' : ''} to="/admin-dashboard">Admin Dashboard</Link>
+                      <Link className={props?.activeClassName === 'admin-dashboard' ? 'active' : ''} to="/">Admin Dashboard</Link>
                     </li>
                     <li>
-                      <Link className={props?.activeClassName === 'doctor-dashboard' ? 'active' : ''} to="/doctor-dashboard">Doctor Dashboard</Link>
+                      <Link className={props?.activeClassName === 'doctor-dashboard' ? 'active' : ''} to="/">Director  Dashboard</Link>
                     </li>
                     <li>
-                      <Link className={props?.activeClassName === 'patient-dashboard' ? 'active' : ''} to="/patient-dashboard">Patient Dashboard</Link>
-                    </li>
-                  </ul>
-                </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item1" onClick={(e) => {
-                    // setSidebar('Doctors')
-                    handleClick(e, "menu-item1", "menu-items1")
-                  }}>
-                    <span className="menu-side">
-                      <img src={doctor} alt="" />
-                    </span>{" "}
-                    <span> Doctors </span> <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: sidebar === 'Doctors' ? 'block' : 'none' }} className="menu-items1">
-                    <li>
-                      <Link className={props?.activeClassName === 'doctor-list' ? 'active' : ''} to="/doctorlist">Doctor List</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-doctor' ? 'active' : ''} to="/add-doctor">Add Doctor</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'edit-doctor' ? 'active' : ''} to="/editdoctor">Edit Doctor</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'doctor-profile' ? 'active' : ''} to="/doctorprofile">Doctor Profile</Link>
+                      <Link className={props?.activeClassName === 'patient-dashboard' ? 'active' : ''} to="/">Profesor Dashboard</Link>
                     </li>
                   </ul>
                 </li>
@@ -102,67 +110,39 @@ const Sidebar = (props) => {
                     <span className="menu-side">
                       <img src={patients} alt="" />
                     </span>{" "}
-                    <span>Patients </span> <span className="menu-arrow" />
+                    <span>Estudiantes </span> <span className="menu-arrow" />
                   </Link>
                   <ul style={{ display: "none" }} className="menu-items2">
                     <li>
-                      <Link className={props?.activeClassName === 'patient-list' ? 'active' : ''} to="/patientslist">Patients List</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-patient' ? 'active' : ''} to="/addpatients">Add Patients</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'edit-patient' ? 'active' : ''} to="/editpatients">Edit Patients</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'patient' ? 'active' : ''} to="/patientsprofile">Patients Profile</Link>
+                      <Link className={props?.activeClassName === 'patient-list' ? 'active' : ''} to="/studentlist">Estudiante Lista</Link>
                     </li>
                   </ul>
                 </li>
+                
                 <li className="submenu">
                   <Link to="#" id="menu-item3" onClick={(e) => handleClick(e, "menu-item3", "menu-items3")}>
                     <span className="menu-side">
                       <img src={menuicon08} alt="" />
                     </span>{" "}
-                    <span> Staff </span> <span className="menu-arrow" />
+                    <span> Matricula </span> <span className="menu-arrow" />
                   </Link>
                   <ul style={{ display: "none" }} className="menu-items3">
                     <li>
-                      <Link className={props?.activeClassName === 'staff-list' ? 'active' : ''} to="/stafflist">Staff List</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-staff' ? 'active' : ''} to="/addstaff">Add Staff</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'staff-profile' ? 'active' : ''} to="/staffprofile">Staff Profile</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'leaves' ? 'active' : ''} to="/leave">Leaves</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'holidays' ? 'active' : ''} to="/holiday">Holidays</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'attendance' ? 'active' : ''} to="/attendence">Attendance</Link>
+                      <Link className={props?.activeClassName === 'staff-list' ? 'active' : ''} to="/enrollmentlist">Matricula Lista</Link>
                     </li>
                   </ul>
                 </li>
+
                 <li className="submenu">
                   <Link to="#" id="menu-item4" onClick={(e) => handleClick(e, "menu-item4", "menu-items4")}>
                     <span className="menu-side">
                       <img src={menuicon04} alt="" />
                     </span>{" "}
-                    <span> Appointments </span> <span className="menu-arrow" />
+                    <span> Asistencia </span> <span className="menu-arrow" />
                   </Link>
                   <ul style={{ display: "none" }} className="menu-items4">
                     <li>
-                      <Link className={props?.activeClassName === 'appoinment-list' ? 'active' : ''} to="/appoinmentlist">Appointment List</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-appoinment' ? 'active' : ''} to="/addappoinments">Add Appointment</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'edit-appoinment' ? 'active' : ''} to="/editappoinments">Edit Appointment</Link>
+                      <Link className={props?.activeClassName === 'appoinment-list' ? 'active' : ''} to="/attendances">Asistencia Lista</Link>
                     </li>
                   </ul>
                 </li>
@@ -171,38 +151,22 @@ const Sidebar = (props) => {
                     <span className="menu-side">
                       <img src={doctorschedule} alt="" />
                     </span>{" "}
-                    <span> Doctor Schedule </span> <span className="menu-arrow" />
+                    <span> Justificaciones </span> <span className="menu-arrow" />
                   </Link>
                   <ul style={{ display: "none" }} className="menu-items5">
                     <li>
-                      <Link className={props?.activeClassName === 'shedule-list' ? 'active' : ''} to="/schedulelist">Schedule List</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-shedule' ? 'active' : ''} to="/addschedule">Add Schedule</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'edit-shedule' ? 'active' : ''} to="/editschedule">Edit Schedule</Link>
+                      <Link className={props?.activeClassName === 'shedule-list' ? 'active' : ''} to="/justifications">Justificaciones Lista</Link>
                     </li>
                   </ul>
                 </li>
                 <li className="submenu">
-                  <Link to="#" id="menu-item6" onClick={(e) => handleClick(e, "menu-item6", "menu-items6")}>
+                  <Link to="/institution" id="menu-item6">
                     <span className="menu-side">
                       <img src={menuicon06} alt="" />
                     </span>{" "}
-                    <span> Departments </span> <span className="menu-arrow" />
+                    <span> Instituciones </span> <span className="menu-arrow" />
                   </Link>
-                  <ul style={{ display: "none" }} className="menu-items6">
-                    <li>
-                      <Link className={props?.activeClassName === 'department-list' ? 'active' : ''} to="/departmentlist">Department List</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-department' ? 'active' : ''} to="/add-department">Add Department</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'edit-department' ? 'active' : ''} to="/editdepartment">Edit Department</Link>
-                    </li>
-                  </ul>
+                  
                 </li>
                 <li className="submenu">
                   <Link to="#" id="menu-item7" onClick={(e) => handleClick(e, "menu-item7", "menu-items7")}>
@@ -234,24 +198,16 @@ const Sidebar = (props) => {
                     <span className="menu-side">
                       <img src={menuicon09} alt="" />
                     </span>{" "}
-                    <span> Payroll </span> <span className="menu-arrow" />
+                    <span> Calificaciones </span> <span className="menu-arrow" />
                   </Link>
                   <ul style={{ display: "none" }} className="menu-items8">
                     <li>
-                      <Link className={props?.activeClassName === 'employee-salary' ? 'active' : ''} to="/employeesalary"> Employee Salary </Link>
+                      <Link className={props?.activeClassName === 'employee-salary' ? 'active' : ''} to="/employeesalary"> Registro de Calificaciones </Link>
                     </li>
                     <li>
-                      <Link className={props?.activeClassName === 'employee-payslip' ? 'active' : ''} to="/payslip"> Payslip </Link>
+                      <Link className={props?.activeClassName === 'employee-payslip' ? 'active' : ''} to="/payslip"> Notificaciones </Link>
                     </li>
                   </ul>
-                </li>
-                <li>
-                  <Link className={props?.activeClassName === 'chat' ? 'active' : ''} to="/chat">
-                    <span className="menu-side">
-                      <img src={menuicon10} alt="" />
-                    </span>{" "}
-                    <span>Chat</span>
-                  </Link>
                 </li>
                 <li className="submenu">
                   <Link to="#" id="menu-item9" onClick={(e) => handleClick(e, "menu-item9", "menu-items9")}>
@@ -272,252 +228,28 @@ const Sidebar = (props) => {
                     </li>
                   </ul>
                 </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item10" onClick={(e) => handleClick(e, "menu-item10", "menu-items10")}>
+ {/* Directors Submenu */}
+ <li className="submenu">
+                  <Link to="#" id="menu-item-directors" onClick={(e) => handleClick(e, "menu-item-directors", "menu-items-directors")}>
                     <span className="menu-side">
-                      <img src={menuicon12} alt="" />
+ {/* Add an appropriate icon here */}
+ <i className="fa fa-user"></i> {/* Using a generic user icon for now */}
                     </span>{" "}
-                    <span> Email</span> <span className="menu-arrow" />
+                    <span> Directors </span> <span className="menu-arrow" />
                   </Link>
-                  <ul style={{ display: "none" }} className="menu-items10">
+                  <ul style={{ display: "none" }} className="menu-items-directors">
                     <li>
-                      <Link className={props?.activeClassName === 'compose-mail' ? 'active' : ''} to="/compose-mail">Compose Mail</Link>
+                      <Link className={props?.activeClassName === 'directors-page1' ? 'active' : ''} to="/directors/page1">Page 1</Link>
                     </li>
                     <li>
-                      <Link className={props?.activeClassName === 'inbox' ? 'active' : ''} to="/inbox">Inbox</Link>
+                      <Link className={props?.activeClassName === 'directors-page2' ? 'active' : ''} to="/directors/page2">Page 2</Link>
                     </li>
                     <li>
-                      <Link className={props?.activeClassName === 'mail-view' ? 'active' : ''} to="/mail-view">Mail View</Link>
+                      <Link className={props?.activeClassName === 'directors-page3' ? 'active' : ''} to="/directors/page3">Page 3</Link>
                     </li>
                   </ul>
                 </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item11" onClick={(e) => handleClick(e, "menu-item11", "menu-items11")}>
-                    <span className="menu-side">
-                      <img src={blog} alt="" />
-                    </span>{" "}
-                    <span> Blog</span> <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items11">
-                    <li>
-                      <Link className={props?.activeClassName === 'blog-grid' ? 'active' : ''} to="/blogview">Blog</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'blog-details' ? 'active' : ''} to="/blog">
-                        Blog View
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-blog' ? 'active' : ''} to="/addblog">Add Blog</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'edit-blog' ? 'active' : ''} to="/editblog">Edit Blog</Link>
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <Link className={props?.activeClassName === 'assests' ? 'active' : ''} to="/assests">
-                    <i className="fa fa-cube" /> <span>Assets</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link className={props?.activeClassName === 'activity' ? 'active' : ''} to="/user-activity">
-                    <span className="menu-side">
-                      <img src={menuicon14} alt="" />
-                    </span>{" "}
-                    <span>Activities</span>
-                  </Link>
-                </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item12" onClick={(e) => handleClick(e, "menu-item12", "menu-items12")}>
-                    <i className="fa fa-flag" /> <span> Reports </span>{" "}
-                    <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items12">
-                    <li>
-                      <Link className={props?.activeClassName === 'expenses-report' ? 'active' : ''} to="/expense-Report"> Expense Report </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'invoice-report' ? 'active' : ''} to="/invoice-report"> Invoice Report </Link>
-                    </li>
-                  </ul>
-                </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item13" onClick={(e) => handleClick(e, "menu-item13", "menu-items13")}>
-                    <span className="menu-side">
-                      <img src={menuicon15} alt="" />
-                    </span>{" "}
-                    <span> Invoice </span> <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items13">
-                    <li>
-                      <Link className={props?.activeClassName === 'invoice-list' ? 'active' : ''} to="/invoice-list"> Invoices List </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'invoice-grid' ? 'active' : ''} to="/invoice-grid"> Invoices Grid</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'add-invoice' ? 'active' : ''} to="/add-invoice"> Add Invoices</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'edit-invoice' ? 'active' : ''} to="/edit-invoice"> Edit Invoices</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'invoice-details' ? 'active' : ''} to="/invoice-details"> Invoices Details</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'invoice-settings' ? 'active' : ''} to="/invoice-settings"> Invoices Settings</Link>
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <Link to="/settings">
-                    <span className="menu-side">
-                      <img src={menuicon16} alt="" />
-                    </span>{" "}
-                    <span>Settings</span>
-                  </Link>
-                </li>
-                <li className="menu-title">UI Elements</li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item14" onClick={(e) => handleClick(e, "menu-item14", "menu-items14")}>
-                    <i className="fa fa-laptop" /> <span> Components</span>{" "}
-                    <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items14">
-                    <li>
-                      <Link className={props?.activeClassName === 'uikit' ? 'active' : ''} to="/ui-kit">UI Kit</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'typography' ? 'active' : ''} to="/typography">Typography</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'tabs' ? 'active' : ''} to="/tab">Tabs</Link>
-                    </li>
-                  </ul>
-                </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item15" onClick={(e) => handleClick(e, "menu-item15", "menu-items15")}>
-                    <i className="fa fa-edit" /> <span> Forms</span>{" "}
-                    <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items15">
-                    <li>
-                      <Link className={props?.activeClassName === 'basic-input' ? 'active' : ''} to="/basic-input">Basic Inputs</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'input-groups' ? 'active' : ''} to="/inputgroup">Input Groups</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'horizontal-form' ? 'active' : ''} to="/horizontal-form">Horizontal Form</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'vertical-form' ? 'active' : ''} to="/vertical-form">Vertical Form</Link>
-                    </li>
-                  </ul>
-                </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item16" onClick={(e) => handleClick(e, "menu-item16", "menu-items16")}>
-                    <i className="fa fa-table" /> <span> Tables</span>{" "}
-                    <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items16">
-                    <li>
-                      <Link className={props?.activeClassName === 'basic-table' ? 'active' : ''} to="/basic-table">Basic Tables</Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'data-table' ? 'active' : ''} to="/data-table">Data Table</Link>
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <Link className={props?.activeClassName === 'calendar' ? 'active' : ''} to="/calender">
-                    <i className="fa fa-calendar" /> <span>Calendar</span>
-                  </Link>
-                </li>
-                <li className="menu-title">Extras</li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item17" onClick={(e) => handleClick(e, "menu-item17", "menu-items17")}>
-                    <i className="fa fa-columns" /> <span>Pages</span>{" "}
-                    <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items17">
-                    <li>
-                      <Link to="/login"> Login </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'register' ? 'active' : ''} to="/register"> Register </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'forgotpassword' ? 'active' : ''} to="/forgotpassword"> Forgot Password </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'changepassword' ? 'active' : ''} to="/changepassword"> Change Password </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'lock-screen' ? 'active' : ''} to="/lockscreen"> Lock Screen </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'profile' ? 'active' : ''} to="/profile"> Profile </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'gallery' ? 'active' : ''} to="/gallery"> Gallery </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === '404-error' ? 'active' : ''} to="/error">404 Error </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === '500-error' ? 'active' : ''} to="/server-error">500 Error </Link>
-                    </li>
-                    <li>
-                      <Link className={props?.activeClassName === 'blank-page' ? 'active' : ''} to="/blankpage"> Blank Page </Link>
-                    </li>
-                  </ul>
-                </li>
-                <li className="submenu">
-                  <Link to="#" id="menu-item18" onClick={(e) => handleClick(e, "menu-item18", "menu-items18")}>
-                    <i className="fa fa-share-alt" /> <span>Multi Level</span>{" "}
-                    <span className="menu-arrow" />
-                  </Link>
-                  <ul style={{ display: "none" }} className="menu-items18">
-                    <li className="submenu">
-                      <Link to="#" id="menu-item19" onClick={(e) => handleClick(e, "menu-item19", "menu-items19")}>
-                        <span>Level 1</span> <span className="menu-arrow" />
-                      </Link>
-                      <ul style={{ display: "none" }} className="menu-items19">
-                        <li>
-                          <Link to="#">
-                            <span>Level 2</span>
-                          </Link>
-                        </li>
-                        <li className="submenu">
-                          <Link to="#" id="menu-item20" onClick={(e) => handleClick(e, "menu-item20", "menu-items20")}>
-                            {" "}
-                            <span> Level 2</span> <span className="menu-arrow" />
-                          </Link>
-                          <ul style={{ display: "none" }} className="menu-items20">
-                            <li>
-                              <Link to="#">Level 3</Link>
-                            </li>
-                            <li>
-                              <Link to="#">Level 3</Link>
-                            </li>
-                          </ul>
-                        </li>
-                        <li>
-                          <Link to="#">
-                            <span>Level 2</span>
-                          </Link>
-                        </li>
-                      </ul>
-                    </li>
-                    <li>
-                      <Link to="#">
-                        <span>Level 1</span>
-                      </Link>
-                    </li>
-                  </ul>
-                </li>
+                {/* End Directors Submenu */}
               </ul>
               <div className="logout-btn">
                 <Link to="/login">
