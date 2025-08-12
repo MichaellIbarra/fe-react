@@ -1,7 +1,7 @@
 {
   "name": "my-app",
   "version": "0.1.0",
-  "homepage": "/",
+  "homepage": "/school",
   "private": true,
   "dependencies": {
     "@babel/traverse": "^7.26.4",

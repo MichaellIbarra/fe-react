@@ -44,7 +44,7 @@ const Approuter = () => {
   // const config = "/react/template"
   return (
     <>
-      <BrowserRouter basename="/">
+      <BrowserRouter basename="/school">
         <Routes>
           <Route path="/" element={<Auth />} />
           <Route path="/login" element={<Auth />} />
