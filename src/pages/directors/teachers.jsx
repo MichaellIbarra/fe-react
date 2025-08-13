@@ -73,28 +73,28 @@ const Teachers = () => {
     };
 
     // Handler for deleting a teacher
-    const handleDeleteTeacher = async (teacherId) => {
-        // TODO: Implement a confirmation dialog (like Swal.fire or a custom modal)
-        if (window.confirm('¿Está seguro de que desea eliminar este profesor?')) { // Using basic confirm for now
-            setLoading(true); // Optional: show loading
-            setError(null);
-            try {
-                // Assuming your teacherService has a delete function (it wasn't in the provided service code)
-                // If not, you'll need to add it to teacherService.js or use userService if it handles teacher deletion
-                // await teacherService.deleteTeacher(teacherId); // <--- Uncomment/implement this
-                 console.log(`Simulating deletion of teacher with ID: ${teacherId}`); // Placeholder
-                 await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call delay
+    // const handleDeleteTeacher = async (teacherId) => {
+    //     // TODO: Implement a confirmation dialog (like Swal.fire or a custom modal)
+    //     if (window.confirm('¿Está seguro de que desea eliminar este profesor?')) { // Using basic confirm for now
+    //         setLoading(true); // Optional: show loading
+    //         setError(null);
+    //         try {
+    //             // Assuming your teacherService has a delete function (it wasn't in the provided service code)
+    //             // If not, you'll need to add it to teacherService.js or use userService if it handles teacher deletion
+    //             // await teacherService.deleteTeacher(teacherId); // <--- Uncomment/implement this
+    //              console.log(`Simulating deletion of teacher with ID: ${teacherId}`); // Placeholder
+    //              await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call delay
 
-                 alert('Profesor eliminado exitosamente.');
-                 loadTeachers(statusFilter); // Refresh list after deletion
-            } catch (error) {
-                console.error('Error al eliminar el profesor:', error);
-                 setError('Error al eliminar el profesor.');
-                alert('Error al eliminar el profesor.');
-                 setLoading(false); // Stop loading on error
-            }
-        }
-    };
+    //              alert('Profesor eliminado exitosamente.');
+    //              loadTeachers(statusFilter); // Refresh list after deletion
+    //         } catch (error) {
+    //             console.error('Error al eliminar el profesor:', error);
+    //              setError('Error al eliminar el profesor.');
+    //             alert('Error al eliminar el profesor.');
+    //              setLoading(false); // Stop loading on error
+    //         }
+    //     }
+    // };
 
 
   return (

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  eduassist-frontend:
+    container_name: eduassist-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - eduassist-network
+
+  # Opcional: Añadir nginx como proxy reverso si se necesita
+  # eduassist-proxy:
+  #   image: nginx:alpine
+  #   container_name: eduassist-proxy
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./proxy.conf:/etc/nginx/nginx.conf
+  #   depends_on:
+  #     - eduassist-frontend
+  #   networks:
+  #     - eduassist-network
+
+networks:
+  eduassist-network:
+    driver: bridge

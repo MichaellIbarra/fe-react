@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom'; // Import useParams
 import { userService } from '../../services/userService';
 
@@ -105,6 +106,10 @@ const UserProfileView = ({ onClose }) => {
             </div>
         </div>
     );
+};
+
+UserProfileView.propTypes = {
+    onClose: PropTypes.func
 };
 
 export default UserProfileView;

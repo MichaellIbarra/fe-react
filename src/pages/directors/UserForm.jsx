@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import Select from 'react-select';
 import axios from 'axios';
 import { userService } from '../../services/userService'; 
@@ -63,7 +64,7 @@ const UserForm = ({ user, onSave, onCancel }) => {
         const fetchInstitution = async () => {
             setLoadingInstitutions(true);
             try {
-                const response = await axios.get('https://ms.institution.machashop.top/api/v1/institutions');
+                const response = await axios.get('https://lab.vallegrande.edu.pe/school/ms-institution/api/v1/institutions');
                 const institutionsData = response.data || [];
                 if (institutionsData.length > 0) {
                     const defaultId = institutionsData[0].id;
@@ -464,6 +465,27 @@ const UserForm = ({ user, onSave, onCancel }) => {
             </div>
         </form>
     );
+};
+
+UserForm.propTypes = {
+    user: PropTypes.shape({
+        id: PropTypes.string,
+        _id: PropTypes.string,
+        firstName: PropTypes.string,
+        lastName: PropTypes.string,
+        email: PropTypes.string,
+        phone: PropTypes.string,
+        userName: PropTypes.string,
+        documentType: PropTypes.string,
+        documentNumber: PropTypes.string,
+        password: PropTypes.string,
+        role: PropTypes.string,
+        status: PropTypes.string,
+        institutionId: PropTypes.string,
+        permissions: PropTypes.array
+    }),
+    onSave: PropTypes.func.isRequired,
+    onCancel: PropTypes.func.isRequired
 };
 
 export default UserForm;

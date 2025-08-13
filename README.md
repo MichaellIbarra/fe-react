@@ -246,3 +246,6 @@ npm run lint:fix
 - Visualización de datos con gráficos interactivos
 - Estadísticas en tiempo real
 - Reportes exportables
+
+"# frontend-react" 
+# fe-react

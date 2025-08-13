@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
 import { userSedeService } from '../../services/userSedeService';
 import { hasPermission } from '../../config/permissions';
 
