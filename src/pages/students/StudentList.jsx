@@ -203,7 +203,7 @@ const StudentList = () => {
           <div className="content container-fluid">
             <div className="text-center mt-5">
               <Spinner animation="border" role="status">
-                <span className="visually-hidden">Cargando...</span>
+                <span className="visually-hidden">Cargando Data...</span>
               </Spinner>
             </div>
           </div>
