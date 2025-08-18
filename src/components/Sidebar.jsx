@@ -169,6 +169,19 @@ const Sidebar = (props) => {
                   
                 </li>
                 <li className="submenu">
+                  <Link to="#" id="menu-item15" onClick={(e) => handleClick(e, "menu-item15", "menu-items15")}>
+                    <span className="menu-side">
+                      <img src={menuicon15} alt="" />
+                    </span>{" "}
+                    <span> Reportes </span> <span className="menu-arrow" />
+                  </Link>
+                  <ul style={{ display: "none" }} className="menu-items15">
+                    <li>
+                      <Link className={props?.activeClassName === 'reports' ? 'active' : ''} to="/reports/institutions-headquarters">Instituciones y Sedes</Link>
+                    </li>
+                  </ul>
+                </li>
+                <li className="submenu">
                   <Link to="#" id="menu-item7" onClick={(e) => handleClick(e, "menu-item7", "menu-items7")}>
                     <span className="menu-side">
                       <img src={sidemenu} alt="" />

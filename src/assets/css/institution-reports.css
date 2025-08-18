@@ -1,0 +1,139 @@
+/* Estilos personalizados para el reporte de instituciones y sedes */
+
+.custom-tooltip {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tooltip-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.tooltip-content div {
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #34495e;
+}
+
+.institution-report-stats .ant-statistic-content {
+  font-size: 24px !important;
+  font-weight: bold;
+}
+
+.institution-report-stats .ant-statistic-title {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.progress {
+  background-color: #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
+}
+
+.actions .btn {
+  margin-right: 4px;
+}
+
+.actions .btn:last-child {
+  margin-right: 0;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.avatar {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+/* Animaciones para las estadísticas */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ant-statistic {
+  animation: countUp 0.8s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .institution-report-stats .ant-col {
+    margin-bottom: 16px;
+  }
+  
+  .table-responsive {
+    font-size: 12px;
+  }
+  
+  .actions .btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+/* Chart container adjustments */
+.chart-container {
+  position: relative;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chart-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+/* Custom scrollbar for table */
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
