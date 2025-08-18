@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://lab.vallegrande.edu.pe/school/ms-student/api/v1',
+  baseURL: 'http://localhost:8081/api/v1',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
