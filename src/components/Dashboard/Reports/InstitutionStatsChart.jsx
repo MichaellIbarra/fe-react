@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import ApexCharts from 'apexcharts';
 
 const InstitutionStatsChart = ({ institutions }) => {
@@ -85,8 +86,7 @@ const InstitutionStatsChart = ({ institutions }) => {
         },
         tooltip: {
           y: {
-            formatter: function (val, { seriesIndex, dataPointIndex }) {
-              const institution = institutions[dataPointIndex];
+            formatter: function (val, { seriesIndex }) {
               if (seriesIndex === 0) {
                 return `${val} sedes activas`;
               } else {
@@ -94,6 +94,7 @@ const InstitutionStatsChart = ({ institutions }) => {
               }
             }
           },
+          // eslint-disable-next-line no-unused-vars
           custom: function({ series, seriesIndex, dataPointIndex, w }) {
             const institution = institutions[dataPointIndex];
             return `
@@ -146,6 +147,20 @@ const InstitutionStatsChart = ({ institutions }) => {
       </div>
     </div>
   );
+};
+
+// PropTypes validation
+InstitutionStatsChart.propTypes = {
+  institutions: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      name: PropTypes.string,
+      codeName: PropTypes.string,
+      headquartersCount: PropTypes.number,
+      totalHeadquarters: PropTypes.number,
+      status: PropTypes.string,
+    })
+  ).isRequired,
 };
 
 export default InstitutionStatsChart;

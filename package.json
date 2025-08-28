@@ -27,6 +27,7 @@
     "axios": "^1.9.0",
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.13.1",
+    "chart.js": "^4.5.0",
     "feather-icons-react": "^0.6.2",
     "fs": "^0.0.1-security",
     "fullcalendar": "^6.1.15",
