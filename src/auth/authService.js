@@ -1,5 +1,5 @@
 // Servicio de autenticación Gateway
-const AUTH_URL = 'https://lab.vallegrande.edu.pe/school/gateway';
+const AUTH_URL = 'https://lab.vallegrande.edu.pe/school/gateway/api/v1/auth';
 const REFRESH_URL = 'https://lab.vallegrande.edu.pe/school/gateway/api/v1/auth/refresh';
 
 export async function loginKeycloak(username, password) {
