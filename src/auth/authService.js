@@ -1,23 +1,18 @@
-// Servicio de autenticación Keycloak
-const AUTH_URL = 'https://auth-school.matichain.dev/realms/auth-school/protocol/openid-connect/token';
-const CLIENT_ID = 'auth-school-client';
-const CLIENT_SECRET = 'WUsgJBE08rdylPM1zIYvdEZQoPJBfrL1';
+// Servicio de autenticación Gateway
+const AUTH_URL = 'https://lab.vallegrande.edu.pe/school/gateway';
+const REFRESH_URL = 'https://lab.vallegrande.edu.pe/school/gateway/api/v1/auth/refresh';
 
 export async function loginKeycloak(username, password) {
-  const params = new URLSearchParams();
-  params.append('client_id', CLIENT_ID);
-  params.append('grant_type', 'password');
-  params.append('username', username);
-  params.append('password', password);
-  params.append('client_secret', CLIENT_SECRET);
-
   try {
     const response = await fetch(AUTH_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: params.toString(),
+      body: JSON.stringify({
+        username: username,
+        password: password
+      }),
     });
     const data = await response.json();
     if (response.ok && data.access_token) {
@@ -34,19 +29,15 @@ export async function loginKeycloak(username, password) {
 }
 
 export async function refreshTokenKeycloak(refreshToken) {
-  const params = new URLSearchParams();
-  params.append('client_id', CLIENT_ID);
-  params.append('grant_type', 'refresh_token');
-  params.append('refresh_token', refreshToken);
-  params.append('client_secret', CLIENT_SECRET);
-
   try {
-    const response = await fetch(AUTH_URL, {
+    const response = await fetch(REFRESH_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: params.toString(),
+      body: JSON.stringify({
+        refreshToken: refreshToken
+      }),
     });
     const data = await response.json();
     if (response.ok && data.access_token) {
