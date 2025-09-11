@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { Table, message, Spin } from "antd";
+import { Table, message, Spin, Button, Dropdown, Menu } from "antd";
 import { Link } from 'react-router-dom';
 import Header from '../../../components/Header';
 import Sidebar from '../../../components/Sidebar';
@@ -9,6 +9,7 @@ import { blogimg10, imagesend, pdficon, pdficon3, pdficon4, plusicon, refreshico
      blogimg2, blogimg4, blogimg6, blogimg8} from '../../../components/imagepath';
 import InstitutionService from '../../../services/institutionService';
 import Institution from '../../../types/institution';
+import ExportUtils from '../../../utils/exportUtils';
 const InstitutionsAll = () => {
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [institutions, setInstitutions] = useState([]);
@@ -148,6 +149,66 @@ const InstitutionsAll = () => {
         statusValue: institution.status,
         createdAt: institution.createdAt ? new Date(institution.createdAt).toLocaleDateString() : '',
     }));
+
+    // Funciones de exportación
+    const exportToCSV = () => {
+        const headers = ['Institución', 'Código', 'Cod.Modular', 'Dirección', 'Email', 'Teléfono', 'Estado', 'Fecha Creación'];
+        const mapFunction = (institution) => [
+            ExportUtils.sanitizeCSV(institution.institutionName),
+            ExportUtils.sanitizeCSV(institution.codeName),
+            ExportUtils.sanitizeCSV(institution.modularCode || ''),
+            ExportUtils.sanitizeCSV(institution.address || ''),
+            ExportUtils.sanitizeCSV(institution.contactEmail || ''),
+            ExportUtils.sanitizeCSV(institution.contactPhone || ''),
+            ExportUtils.sanitizeCSV(institution.getStatusText()),
+            ExportUtils.sanitizeCSV(institution.createdAt ? new Date(institution.createdAt).toLocaleDateString() : '')
+        ];
+        ExportUtils.exportToCSV(filteredInstitutions, headers, mapFunction, 'instituciones');
+    };
+
+    const exportToPDF = () => {
+        const headers = ['Institución', 'Código', 'Cod.Modular', 'Dirección', 'Email', 'Teléfono', 'Estado'];
+        const mapFunction = (institution) => `
+            <td>${ExportUtils.sanitizeHTML(institution.institutionName)}</td>
+            <td>${ExportUtils.sanitizeHTML(institution.codeName)}</td>
+            <td>${ExportUtils.sanitizeHTML(institution.modularCode || '')}</td>
+            <td>${ExportUtils.sanitizeHTML(institution.address || '')}</td>
+            <td>${ExportUtils.sanitizeHTML(institution.contactEmail || '')}</td>
+            <td>${ExportUtils.sanitizeHTML(institution.contactPhone || '')}</td>
+            <td class="${institution.status === 'A' ? 'active' : 'inactive'}">${ExportUtils.sanitizeHTML(institution.getStatusText())}</td>
+        `;
+        ExportUtils.exportToPDF(filteredInstitutions, headers, mapFunction, 'Reporte de Instituciones');
+    };
+
+    const exportToExcel = () => {
+        const headers = ['Institución', 'Código', 'Cod.Modular', 'Dirección', 'Email', 'Teléfono', 'Estado', 'Fecha Creación'];
+        const mapFunction = (institution) => [
+            institution.institutionName,
+            institution.codeName,
+            institution.modularCode || '',
+            institution.address || '',
+            institution.contactEmail || '',
+            institution.contactPhone || '',
+            institution.getStatusText(),
+            institution.createdAt ? new Date(institution.createdAt).toLocaleDateString() : ''
+        ];
+        ExportUtils.exportToExcel(filteredInstitutions, headers, mapFunction, 'instituciones', 'Instituciones');
+    };
+
+    // Menú de exportación
+    const exportMenu = (
+        <Menu>
+            <Menu.Item key="csv" icon={<i className="fas fa-file-csv"></i>} onClick={exportToCSV}>
+                Exportar CSV
+            </Menu.Item>
+            <Menu.Item key="pdf" icon={<i className="fas fa-file-pdf"></i>} onClick={exportToPDF}>
+                Exportar PDF
+            </Menu.Item>
+            <Menu.Item key="excel" icon={<i className="fas fa-file-excel"></i>} onClick={exportToExcel}>
+                Exportar Excel
+            </Menu.Item>
+        </Menu>
+    );
     const columns = [
         {
             title: "Institución",
@@ -322,6 +383,16 @@ const InstitutionsAll = () => {
                           </form>
                         </div>
                         <div className="add-group">
+                          <Dropdown overlay={exportMenu} placement="bottomLeft" trigger={['click']}>
+                            <Button 
+                              className="btn btn-success ms-2" 
+                              title="Exportar datos"
+                              style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              <i className="fas fa-download"></i>
+                              Exportar
+                            </Button>
+                          </Dropdown>
                           <Link
                            to="/add-institution"
                             className="btn btn-primary add-pluss ms-2"

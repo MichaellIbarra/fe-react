@@ -1,12 +1,13 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { Table, message, Spin } from "antd";
+import { Table, message, Spin, Button, Dropdown, Menu } from "antd";
 import { Link, useParams } from 'react-router-dom';
 import Header from '../../../components/Header';
 import Sidebar from '../../../components/Sidebar';
 import { itemRender, onShowSizeChange } from '../../../components/Pagination';
 import { plusicon, refreshicon, searchnormal, pdficon, pdficon3, pdficon4 } from '../../../components/imagepath';
 import InstitutionService from '../../../services/institutionService';
+import ExportUtils from '../../../utils/exportUtils';
 
 const HeadquartersAll = () => {
     const { id } = useParams();
@@ -173,6 +174,67 @@ const HeadquartersAll = () => {
         status: headquarter.status === 'A' ? 'Activo' : 'Inactivo',
         statusValue: headquarter.status
     }));
+
+    // Funciones de exportación para sedes
+    const exportToCSV = () => {
+        const headers = ['Nombre de Sede', 'Código', 'Dirección', 'Persona de Contacto', 'Email', 'Teléfono', 'Estado'];
+        const mapFunction = (hq) => [
+            ExportUtils.sanitizeCSV(hq.headquartersName),
+            ExportUtils.sanitizeCSV(hq.headquartersCode),
+            ExportUtils.sanitizeCSV(hq.address || ''),
+            ExportUtils.sanitizeCSV(hq.contactPerson || ''),
+            ExportUtils.sanitizeCSV(hq.contactEmail || ''),
+            ExportUtils.sanitizeCSV(hq.contactPhone || ''),
+            ExportUtils.sanitizeCSV(hq.status === 'A' ? 'Activo' : 'Inactivo')
+        ];
+        const filename = `sedes_${institutionName.replace(/\s+/g, '_')}`;
+        ExportUtils.exportToCSV(filteredHeadquarters, headers, mapFunction, filename);
+    };
+
+    const exportToPDF = () => {
+        const headers = ['Nombre de Sede', 'Código', 'Dirección', 'Persona de Contacto', 'Email', 'Teléfono', 'Estado'];
+        const mapFunction = (hq) => `
+            <td>${ExportUtils.sanitizeHTML(hq.headquartersName)}</td>
+            <td>${ExportUtils.sanitizeHTML(hq.headquartersCode)}</td>
+            <td>${ExportUtils.sanitizeHTML(hq.address || '')}</td>
+            <td>${ExportUtils.sanitizeHTML(hq.contactPerson || '')}</td>
+            <td>${ExportUtils.sanitizeHTML(hq.contactEmail || '')}</td>
+            <td>${ExportUtils.sanitizeHTML(hq.contactPhone || '')}</td>
+            <td class="${hq.status === 'A' ? 'active' : 'inactive'}">${ExportUtils.sanitizeHTML(hq.status === 'A' ? 'Activo' : 'Inactivo')}</td>
+        `;
+        ExportUtils.exportToPDF(filteredHeadquarters, headers, mapFunction, 'Reporte de Sedes', institutionName);
+    };
+
+    const exportToExcel = () => {
+        const headers = ['Nombre de Sede', 'Código', 'Dirección', 'Persona de Contacto', 'Email', 'Teléfono', 'Estado'];
+        const mapFunction = (hq) => [
+            hq.headquartersName,
+            hq.headquartersCode,
+            hq.address || '',
+            hq.contactPerson || '',
+            hq.contactEmail || '',
+            hq.contactPhone || '',
+            hq.status === 'A' ? 'Activo' : 'Inactivo'
+        ];
+        const filename = `sedes_${institutionName.replace(/\s+/g, '_')}`;
+        const sheetName = `Sedes - ${institutionName}`;
+        ExportUtils.exportToExcel(filteredHeadquarters, headers, mapFunction, filename, sheetName);
+    };
+
+    // Menú de exportación
+    const exportMenu = (
+        <Menu>
+            <Menu.Item key="csv" icon={<i className="fas fa-file-csv"></i>} onClick={exportToCSV}>
+                Exportar CSV
+            </Menu.Item>
+            <Menu.Item key="pdf" icon={<i className="fas fa-file-pdf"></i>} onClick={exportToPDF}>
+                Exportar PDF
+            </Menu.Item>
+            <Menu.Item key="excel" icon={<i className="fas fa-file-excel"></i>} onClick={exportToExcel}>
+                Exportar Excel
+            </Menu.Item>
+        </Menu>
+    );
 
     const columns = [
         {
@@ -345,6 +407,16 @@ const HeadquartersAll = () => {
                                                             </form>
                                                         </div>
                                                         <div className="add-group">
+                                                            <Dropdown overlay={exportMenu} placement="bottomLeft" trigger={['click']}>
+                                                                <Button 
+                                                                    className="btn btn-success ms-2" 
+                                                                    title="Exportar datos"
+                                                                    style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                                >
+                                                                    <i className="fas fa-download"></i>
+                                                                    Exportar
+                                                                </Button>
+                                                            </Dropdown>
                                                             <Link
                                                                 to={`/add-headquarter/${id}`}
                                                                 className="btn btn-primary add-pluss ms-2"
