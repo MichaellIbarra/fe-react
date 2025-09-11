@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Button, Form, InputGroup, Spinner, Modal, Card, Row, Col } from 'react-bootstrap';
 import { studentService } from '../../services';
-import { exportStudentsCSV } from './studentReportService';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import CustomAlert from '../common/CustomAlert';
@@ -47,12 +46,6 @@ const StudentList = () => {
   useEffect(() => {
     loadStudents();
   }, []);
-                  <Button 
-                    onClick={exportStudentsCSV} 
-                    style={{marginBottom: '1rem'}}
-                  >
-                    Exportar estudiantes CSV
-                  </Button>
 
   const showAlert = (config) => {
     setAlert({ ...config, show: true });
@@ -210,7 +203,7 @@ const StudentList = () => {
           <div className="content container-fluid">
             <div className="text-center mt-5">
               <Spinner animation="border" role="status">
-                <span className="visually-hidden">Cargando Data...</span>
+                <span className="visually-hidden">Cargando...</span>
               </Spinner>
             </div>
           </div>
@@ -240,14 +233,6 @@ const StudentList = () => {
                 >
                   <i className="fas fa-plus me-2"></i>
                   Agregar Estudiante
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  onClick={exportStudentsCSV}
-                  style={{marginLeft: '10px'}}
-                >
-                  <i className="fas fa-file-csv me-2"></i>
-                  Exportar CSV
                 </Button>
               </div>
             </div>

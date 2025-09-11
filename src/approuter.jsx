@@ -36,6 +36,7 @@ import AddDirector from "./pages/admin/institutions/addDirector";
 import HeadquartersAll from "./pages/admin/institutions/headquartersAll";
 import AddHeadquarters from "./pages/admin/institutions/addHeadquarters";
 import EditHeadquarters from "./pages/admin/institutions/editHeadquarters";
+import InstitutionHeadquartersReport from "./pages/admin/reports/InstitutionHeadquartersReport";
 import Attendence from "./pages/teacher/attendance/Attendence";
 import Justifications from "./pages/teacher/attendance/Justifications";
 //Accounts
@@ -66,6 +67,9 @@ const Approuter = () => {
           <Route path="/institution-headquarters/:id" element={<HeadquartersAll />} />
           <Route path="/add-headquarter/:id" element={<AddHeadquarters />} />
           <Route path="/edit-headquarter/:id" element={<EditHeadquarters />} />
+
+          {/* Reports Routes */}
+          <Route path="/reports/institutions-headquarters" element={<InstitutionHeadquartersReport />} />
 
           <Route path="/studentlist" element={<StudentList />} />
           <Route path="/add-student" element={<AddStudent />} />

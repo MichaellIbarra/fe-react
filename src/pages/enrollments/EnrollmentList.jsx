@@ -7,7 +7,6 @@ import { classroomService } from '../../services/classroomService';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import CustomAlert from '../common/CustomAlert';
-import { exportClassroomStudentsCSV } from './enrollmentReportService';
 
 const EnrollmentList = () => {
   const navigate = useNavigate();
@@ -290,7 +289,6 @@ const EnrollmentList = () => {
                 <span className="visually-hidden">Cargando...</span>
               </Spinner>
             </div>
-          <button onClick={exportClassroomStudentsCSV} style={{marginBottom: '1rem'}}>Exportar matrículas CSV</button>
           </div>
         </div>
       </>
@@ -318,14 +316,6 @@ const EnrollmentList = () => {
                 >
                   <i className="fas fa-plus me-2"></i>
                   Agregar Matrícula
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  onClick={exportClassroomStudentsCSV}
-                  style={{marginLeft: '10px'}}
-                >
-                  <i className="fas fa-file-csv me-2"></i>
-                  Exportar CSV
                 </Button>
               </div>
             </div>

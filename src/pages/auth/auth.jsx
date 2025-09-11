@@ -1,56 +1,52 @@
-import React from "react";
-import { Link } from "react-router-dom";
-// import FeatherIcon from "feather-icons-react";
+
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "feather-icons-react/build/IconComponents";
 import { login02, loginicon01, loginicon02, loginicon03, loginlogo } from "../../components/imagepath";
+import { loginKeycloak } from "../../auth/authService";
 import "owl.carousel/dist/assets/owl.carousel.css";
 import "owl.carousel/dist/assets/owl.theme.default.css";
-import { useState } from "react";
-
-import { Eye, EyeOff } from "feather-icons-react/build/IconComponents";
-
-// import ReactPasswordToggleIcon from 'react-password-toggle-icon';
-
-
 
 const Auth = () => {
-
-
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    // Puedes dejar los valores fijos o usar los del formulario
+    const user = username;
+    const pass = password;
+    const result = await loginKeycloak(user, pass);
+    setLoading(false);
+    if (result.success) {
+      navigate("/admin");
+    } else {
+      setError(result.error);
+    }
+  };
 
-  // let inputRef = useRef();
-  // const showIcon = () => <i className="feather feather-eye" aria-hidden="true">
-  //   <FeatherIcon icon="eye" />
-  // </i>;
-  // const hideIcon = () => <i className="feather feather-eye-slash" aria-hidden="true">
-  //   <FeatherIcon icon="eye-off" />
-  // </i>
   return (
     <>
-
-      {/* Main Wrapper */}
       <div className="main-wrapper login-body">
         <div className="container-fluid px-0">
           <div className="row">
-            {/* Auth logo */}
             <div className="col-lg-6 login-wrap">
               <div className="login-sec">
                 <div className="log-img">
-                  <img
-                    className="img-fluid"
-                    src={login02}
-                    alt="#"
-                  />
+                  <img className="img-fluid" src={login02} alt="#" />
                 </div>
               </div>
             </div>
-            {/* /Auth logo */}
-            {/* Auth Content */}
             <div className="col-lg-6 login-wrap-bg">
               <div className="login-wrapper">
                 <div className="loginbox">
@@ -62,77 +58,62 @@ const Auth = () => {
                         </Link>
                       </div>
                       <h2>Auth</h2>
-                      {/* Form */}
-                      <form >
+                      <form onSubmit={handleSubmit}>
                         <div className="form-group">
                           <label>
-                            Email <span className="login-danger">*</span>
+                            Usuario <span className="login-danger">*</span>
                           </label>
-                          <input className="form-control" type="text" />
+                          <input
+                            className="form-control"
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="username"
+                            autoComplete="username"
+                          />
                         </div>
                         <div className="form-group">
                           <label>
                             Password <span className="login-danger">*</span>
                           </label>
                           <input
-                            type={passwordVisible ? 'password' : ''}
+                            type={passwordVisible ? "text" : "password"}
                             className="form-control pass-input"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            placeholder="password"
+                            autoComplete="current-password"
                           />
                           <span
                             className="toggle-password"
                             onClick={togglePasswordVisibility}
                           >
-                            {passwordVisible ? <EyeOff className="react-feather-custom" /> : <Eye className="react-feather-custom" />}
+                            {passwordVisible ? (
+                              <EyeOff className="react-feather-custom" />
+                            ) : (
+                              <Eye className="react-feather-custom" />
+                            )}
                           </span>
                         </div>
-                        <div className="forgotpass">
-                          <div className="remember-me">
-                            <label className="custom_check mr-2 mb-0 d-inline-flex remember-me">
-                              {" "}
-                              Remember me
-                              <input type="checkbox" name="radio" />
-                              <span className="checkmark" />
-                            </label>
+                        {error && (
+                          <div className="alert alert-danger" role="alert">
+                            {error}
                           </div>
-                          <Link to="/forgotpassword">Forgot Password?</Link>
-                        </div>
+                        )}
                         <div className="form-group login-btn">
-                          <Link to="/admin"
+                          <button
+                            type="submit"
                             className="btn btn-primary btn-block"
+                            disabled={loading}
                           >
-                            Admin
-                          </Link>
-                        </div>
-                        <div className="form-group login-btn">
-                          <Link to="/principal"
-                            className="btn btn-primary btn-block"
-                          >
-                            Principal
-                          </Link>
-                        </div>
-                              <div className="form-group login-btn">
-                          <Link to="/teacher"
-                            className="btn btn-primary btn-block"
-                          >
-                            Teacher
-                          </Link>
-                        </div>
-                        <div className="form-group login-btn">
-                          <Link to="/directors"
-                            className="btn btn-primary btn-block"
-                          >
-                            Directors
-                          </Link>
+                            {loading ? "Ingresando..." : "Login"}
+                          </button>
                         </div>
                       </form>
-                      {/* /Form */}
                       <div className="next-sign">
                         <p className="account-subtitle">
                           Need an account? <Link to="/signup">Sign Up</Link>
                         </p>
-                        {/* Social Auth */}
                         <div className="social-login">
                           <Link to="#">
                             <img src={loginicon01} alt="#" />
@@ -144,14 +125,12 @@ const Auth = () => {
                             <img src={loginicon03} alt="#" />
                           </Link>
                         </div>
-                        {/* /Social Auth */}
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            {/* /Auth Content */}
           </div>
         </div>
       </div>
