@@ -42,38 +42,30 @@ FROM nginx:alpine AS production
 RUN apk add --no-cache curl
 
 # Remover la configuración por defecto de nginx
-RUN rm /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/conf.d/*.conf
 
 # Copiar configuración personalizada de nginx
-COPY nginx.conf /etc/nginx/conf.d/
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copiar los archivos construidos desde la etapa anterior
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Crear un usuario no-root para ejecutar nginx
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001 -G nodejs
+# Crear directorios necesarios y establecer permisos
+RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /var/run && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /etc/nginx/conf.d
 
-# Cambiar permisos de los archivos
-RUN chown -R nextjs:nodejs /usr/share/nginx/html && \
-    chown -R nextjs:nodejs /var/cache/nginx && \
-    chown -R nextjs:nodejs /var/log/nginx && \
-    chown -R nextjs:nodejs /etc/nginx/conf.d && \
-    touch /var/run/nginx.pid && \
-    chown -R nextjs:nodejs /var/run/nginx.pid
-
-# Configurar nginx para correr sin privilegios de root
-RUN sed -i '/user nginx;/d' /etc/nginx/nginx.conf
-
-# Cambiar a usuario no-root
-USER nextjs
+# No cambiar a usuario no-root para poder usar puerto 80
+# USER nginx está configurado en nginx.conf
 
 # Exponer el puerto 80
 EXPOSE 80
 
 # Comando de health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:80/ || exit 1
+  CMD curl -f http://localhost/ || exit 1
 
 # Comando para ejecutar nginx
 CMD ["nginx", "-g", "daemon off;"]
