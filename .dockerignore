@@ -24,28 +24,6 @@ coverage
 # Directorio de dependencias de nyc test coverage
 .nyc_output
 
-# Git
-.git
-.gitignore
-
-# Archivos del sistema
-.DS_Store
-Thumbs.db
-
-# IDEs
-.vscode
-.idea
-
-# Docker
-.dockerignore
-Dockerfile
-docker-compose*.yml
-
-# Otros archivos innecesarios
-README.md
-*.md
-.cache
-
 # Archivos de configuración del IDE
 .vscode
 .idea
