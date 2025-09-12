@@ -39,12 +39,20 @@ const DirectorsAll = () => {
             console.log('Loading directors...');
             setLoading(true);
             const directorsData = await InstitutionService.getInstitutionDirectors(id);
-            console.log('Directors loaded:', directorsData.length, 'items');
-            setDirectors(directorsData);
+            
+            // Asegurar que directorsData sea un array
+            const safeDirectors = Array.isArray(directorsData) ? directorsData : [];
+            
+            console.log('Directors loaded:', safeDirectors.length, 'items');
+            console.log('Directors data type:', typeof directorsData, 'IsArray:', Array.isArray(directorsData));
+            
+            setDirectors(safeDirectors);
             console.log('State updated with new directors');
         } catch (error) {
             message.error('Error al cargar los directores');
             console.error('Error loading directors:', error);
+            // En caso de error, asegurar que el estado sea un array vacío
+            setDirectors([]);
         } finally {
             setLoading(false);
             console.log('Loading finished');
@@ -71,11 +79,11 @@ const DirectorsAll = () => {
     };
 
     // Filtrar directores basado en el término de búsqueda
-    const filteredDirectors = directors.filter(director =>
-        director.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        director.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        director.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        director.documentNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredDirectors = (Array.isArray(directors) ? directors : []).filter(director =>
+        director.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        director.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        director.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        director.documentNumber?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Preparar datos para la tabla

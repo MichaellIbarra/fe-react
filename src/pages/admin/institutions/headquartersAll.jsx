@@ -40,12 +40,20 @@ const HeadquartersAll = () => {
             console.log('Loading headquarters...');
             setLoading(true);
             const headquartersData = await InstitutionService.getInstitutionHeadquarters(id);
-            console.log('Headquarters loaded:', headquartersData.length, 'items');
-            setHeadquarters(headquartersData);
+            
+            // Asegurar que headquartersData sea un array
+            const safeHeadquarters = Array.isArray(headquartersData) ? headquartersData : [];
+            
+            console.log('Headquarters loaded:', safeHeadquarters.length, 'items');
+            console.log('Headquarters data type:', typeof headquartersData, 'IsArray:', Array.isArray(headquartersData));
+            
+            setHeadquarters(safeHeadquarters);
             console.log('State updated with new headquarters');
         } catch (error) {
             message.error('Error al cargar las sedes');
             console.error('Error loading headquarters:', error);
+            // En caso de error, asegurar que el estado sea un array vacío
+            setHeadquarters([]);
         } finally {
             setLoading(false);
             console.log('Loading finished');
@@ -154,11 +162,11 @@ const HeadquartersAll = () => {
     };
 
     // Filtrar sedes basado en el término de búsqueda
-    const filteredHeadquarters = headquarters.filter(headquarter =>
-        headquarter.headquartersName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        headquarter.headquartersCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        headquarter.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        headquarter.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredHeadquarters = (Array.isArray(headquarters) ? headquarters : []).filter(headquarter =>
+        headquarter.headquartersName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        headquarter.headquartersCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        headquarter.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        headquarter.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Preparar datos para la tabla

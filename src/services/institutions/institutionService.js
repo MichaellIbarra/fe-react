@@ -25,7 +25,21 @@ class InstitutionService {
   extractResponseData(responseData) {
     // La nueva API devuelve datos en el formato: { metadata: {...}, data: [...] }
     // Si no existe 'data', asumir que responseData es directamente el contenido
-    return responseData.data || responseData;
+    const data = responseData.data || responseData;
+    
+    // Manejar casos null o undefined
+    if (!data) {
+      return null;
+    }
+    
+    // Si data es un array con un solo elemento, devolver ese elemento
+    // Si data es un array con múltiples elementos, devolver el array
+    // Si data no es un array, devolverlo tal como está
+    if (Array.isArray(data) && data.length === 1) {
+      return data[0];
+    }
+    
+    return data;
   }
 
   // Función auxiliar para realizar peticiones con manejo automático de renovación de token
@@ -86,12 +100,16 @@ class InstitutionService {
       }
       
       const responseData = await response.json();
-      const institutions = this.extractResponseData(responseData);
+      let institutions = responseData.data || responseData;
       
-      if (!Array.isArray(institutions)) {
-        console.error('Expected array of institutions, got:', institutions);
-        throw new Error('Invalid response format: expected array of institutions');
+      // SIEMPRE asegurar que institutions sea un array válido
+      if (!institutions) {
+        institutions = [];
+      } else if (!Array.isArray(institutions)) {
+        institutions = [institutions];
       }
+      
+      console.log('getAllInstitutions returning:', institutions.length, 'institutions');
       
       return institutions.map(institution => new Institution(institution));
     } catch (error) {
@@ -168,9 +186,8 @@ class InstitutionService {
   // Eliminar (inactivar) una institución
   async deleteInstitution(id) {
     try {
-      const response = await fetch(`${this.apiUrl}/${id}`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(`${this.apiUrl}/${id}`, {
+        method: 'DELETE'
       });
       
       if (!response.ok) {
@@ -187,17 +204,18 @@ class InstitutionService {
   // Restaurar una institución
   async restoreInstitution(id) {
     try {
-      const response = await fetch(`${this.apiUrl}/restore/${id}`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(`${this.apiUrl}/restore/${id}`, {
+        method: 'PUT'
       });
       
       if (!response.ok) {
         throw new Error(`Error restoring institution: ${response.status}`);
       }
       
-      const data = await response.json();
-      return new Institution(data);
+      const responseData = await response.json();
+      const institutionRestored = this.extractResponseData(responseData);
+      
+      return new Institution(institutionRestored);
     } catch (error) {
       console.error('Error in InstitutionService.restoreInstitution:', error);
       throw error;
@@ -207,17 +225,18 @@ class InstitutionService {
   // Asignar director a una institución
   async assignDirector(id, directorData) {
     try {
-      const response = await fetch(`${this.apiUrl}/assign/${id}`, {
+      const response = await this.makeAuthenticatedRequest(`${this.apiUrl}/assign/${id}`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(directorData),
+        body: JSON.stringify(directorData)
       });
       
       if (!response.ok) {
         throw new Error(`Error assigning director: ${response.status}`);
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = this.extractResponseData(responseData);
+      
       return data;
     } catch (error) {
       console.error('Error in InstitutionService.assignDirector:', error);
@@ -228,17 +247,27 @@ class InstitutionService {
   // Obtener directores de una institución
   async getInstitutionDirectors(id) {
     try {
-      const response = await fetch(`${this.apiUrl}/${id}/directors`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(`${this.apiUrl}/${id}/directors`, {
+        method: 'GET'
       });
       
       if (!response.ok) {
         throw new Error(`Error fetching directors: ${response.status}`);
       }
       
-      const data = await response.json();
-      return data;
+      const responseData = await response.json();
+      let directors = responseData.data || responseData;
+      
+      // SIEMPRE asegurar que directors sea un array válido
+      if (!directors) {
+        directors = [];
+      } else if (!Array.isArray(directors)) {
+        directors = [directors];
+      }
+      
+      console.log('getInstitutionDirectors returning:', directors, 'Type:', typeof directors, 'IsArray:', Array.isArray(directors));
+      
+      return directors;
     } catch (error) {
       console.error('Error in InstitutionService.getInstitutionDirectors:', error);
       throw error;
@@ -248,17 +277,27 @@ class InstitutionService {
   // Obtener sedes de una institución
   async getInstitutionHeadquarters(id) {
     try {
-      const response = await fetch(`${this.apiUrl}/${id}/headquarters`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(`${this.apiUrl}/${id}/headquarters`, {
+        method: 'GET'
       });
       
       if (!response.ok) {
         throw new Error(`Error fetching headquarters: ${response.status}`);
       }
       
-      const data = await response.json();
-      return data;
+      const responseData = await response.json();
+      let headquarters = responseData.data || responseData;
+      
+      // SIEMPRE asegurar que headquarters sea un array válido
+      if (!headquarters) {
+        headquarters = [];
+      } else if (!Array.isArray(headquarters)) {
+        headquarters = [headquarters];
+      }
+      
+      console.log('getInstitutionHeadquarters returning:', headquarters, 'Type:', typeof headquarters, 'IsArray:', Array.isArray(headquarters));
+      
+      return headquarters;
     } catch (error) {
       console.error('Error in InstitutionService.getInstitutionHeadquarters:', error);
       throw error;
@@ -268,9 +307,8 @@ class InstitutionService {
   // Eliminar (inactivar) una sede
   async deleteHeadquarter(id) {
     try {
-      const response = await fetch(`${this.headquartersUrl}/${id}`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(`${this.headquartersUrl}/${id}`, {
+        method: 'DELETE'
       });
       
       if (!response.ok) {
@@ -287,16 +325,17 @@ class InstitutionService {
   // Restaurar una sede
   async restoreHeadquarter(id) {
     try {
-      const response = await fetch(`${this.headquartersUrl}/restore/${id}`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(`${this.headquartersUrl}/restore/${id}`, {
+        method: 'PUT'
       });
       
       if (!response.ok) {
         throw new Error(`Error restoring headquarter: ${response.status}`);
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = this.extractResponseData(responseData);
+      
       return data;
     } catch (error) {
       console.error('Error in InstitutionService.restoreHeadquarter:', error);
@@ -314,17 +353,18 @@ class InstitutionService {
       
       console.log('Creating headquarter with data:', headquarterData);
       
-      const response = await fetch(this.headquartersUrl, {
+      const response = await this.makeAuthenticatedRequest(this.headquartersUrl, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(headquarterData),
+        body: JSON.stringify(headquarterData)
       });
       
       if (!response.ok) {
         throw new Error(`Error creating headquarter: ${response.status}`);
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = this.extractResponseData(responseData);
+      
       return data;
     } catch (error) {
       console.error('Error in InstitutionService.createHeadquarter:', error);
@@ -342,17 +382,18 @@ class InstitutionService {
       
       console.log('Updating headquarter with data:', headquarterData);
       
-      const response = await fetch(`${this.headquartersUrl}/${id}`, {
+      const response = await this.makeAuthenticatedRequest(`${this.headquartersUrl}/${id}`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(headquarterData),
+        body: JSON.stringify(headquarterData)
       });
       
       if (!response.ok) {
         throw new Error(`Error updating headquarter: ${response.status}`);
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = this.extractResponseData(responseData);
+      
       return data;
     } catch (error) {
       console.error('Error in InstitutionService.updateHeadquarter:', error);
@@ -363,16 +404,17 @@ class InstitutionService {
   // Obtener sede por ID
   async getHeadquarterById(id) {
     try {
-      const response = await fetch(`${this.headquartersUrl}/${id}`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(`${this.headquartersUrl}/${id}`, {
+        method: 'GET'
       });
       
       if (!response.ok) {
         throw new Error(`Error fetching headquarter: ${response.status}`);
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = this.extractResponseData(responseData);
+      
       console.log('Headquarter data retrieved from API:', data);
       
       // Si el status es null, asignar 'A' por defecto
@@ -390,17 +432,18 @@ class InstitutionService {
   // Método legacy para compatibilidad
   async getCurrentInstitution() {
     try {
-      const response = await fetch(this.apiUrl, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
+      const response = await this.makeAuthenticatedRequest(this.apiUrl, {
+        method: 'GET'
       });
       
       if (!response.ok) {
         throw new Error(`Error fetching user profile: ${response.status}`);
       }
       
-      const data = await response.json();
-      return new Institution(data);
+      const responseData = await response.json();
+      const institutionData = this.extractResponseData(responseData);
+      
+      return new Institution(institutionData);
     } catch (error) {
       console.error('Error in InstitutionService.getCurrentUser:', error);
       throw error;

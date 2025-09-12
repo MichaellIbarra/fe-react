@@ -27,12 +27,20 @@ const InstitutionsAll = () => {
             console.log('Loading institutions...');
             setLoading(true);
             const institutionsData = await InstitutionService.getAllInstitutions();
-            console.log('Institutions loaded:', institutionsData.length, 'items');
-            setInstitutions(institutionsData);
+            
+            // Asegurar que institutionsData sea un array
+            const safeInstitutions = Array.isArray(institutionsData) ? institutionsData : [];
+            
+            console.log('Institutions loaded:', safeInstitutions.length, 'items');
+            console.log('Institutions data type:', typeof institutionsData, 'IsArray:', Array.isArray(institutionsData));
+            
+            setInstitutions(safeInstitutions);
             console.log('State updated with new institutions');
         } catch (error) {
             message.error('Error al cargar las instituciones');
             console.error('Error loading institutions:', error);
+            // En caso de error, asegurar que el estado sea un array vacío
+            setInstitutions([]);
         } finally {
             setLoading(false);
             console.log('Loading finished');
@@ -129,10 +137,10 @@ const InstitutionsAll = () => {
     };
 
     // Filtrar instituciones basado en el término de búsqueda
-    const filteredInstitutions = institutions.filter(institution =>
-        institution.institutionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        institution.codeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        institution.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredInstitutions = (Array.isArray(institutions) ? institutions : []).filter(institution =>
+        institution.institutionName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        institution.codeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        institution.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Preparar datos para la tabla
