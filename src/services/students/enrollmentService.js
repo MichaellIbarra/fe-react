@@ -3,7 +3,7 @@ import { apiClient } from '../../config/api.config';
 const enrollmentService = {
   getAllEnrollments: async () => {
     try {
-      const response = await apiClient.get('/classroom-students');
+      const response = await apiClient.get('/enrollments');
       return response.data;
     } catch (error) {
       console.error('Error al obtener matrículas:', error);
@@ -13,7 +13,7 @@ const enrollmentService = {
 
   getEnrollmentById: async (id) => {
     try {
-      const response = await apiClient.get(`/classroom-students/${id}`);
+      const response = await apiClient.get(`/enrollments/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error al obtener matrícula:', error);
@@ -33,7 +33,7 @@ const enrollmentService = {
         throw new Error('El estudiante ya tiene una matrícula activa');
       }
 
-      const response = await apiClient.post('/classroom-students', enrollmentData);
+      const response = await apiClient.post('/enrollments', enrollmentData);
       return response.data;
     } catch (error) {
       console.error('Error al crear matrícula:', error);
@@ -57,7 +57,7 @@ const enrollmentService = {
         }
       }
 
-      const response = await apiClient.put(`/classroom-students/${id}`, enrollmentData);
+      const response = await apiClient.put(`/enrollments/${id}`, enrollmentData);
       return response.data;
     } catch (error) {
       console.error('Error al actualizar matrícula:', error);
@@ -68,7 +68,7 @@ const enrollmentService = {
   deleteEnrollment: async (id) => {
     try {
       // Usamos el método DELETE según la documentación
-      const response = await apiClient.delete(`/classroom-students/${id}`);
+      const response = await apiClient.delete(`/enrollments/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error al desactivar matrícula:', error);
@@ -82,7 +82,7 @@ const enrollmentService = {
   restoreEnrollment: async (id) => {
     try {
       // Usamos el endpoint correcto para restaurar
-      const response = await apiClient.put(`/classroom-students/${id}/restore`);
+      const response = await apiClient.put(`/enrollments/${id}/restore`);
       return response.data;
     } catch (error) {
       console.error('Error al restaurar matrícula:', error);
