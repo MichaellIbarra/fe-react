@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Alert, Form, Row, Col, Table, Badge, Modal, ProgressBar } from 'react-bootstrap';
+import { Card, Button, Alert, Form, Row, Col, Table, Badge, ProgressBar } from 'react-bootstrap';
 import { studentService } from '../../services/students';
 import { DocumentType, Gender, StudentStatus } from '../../types/students/student.types';
 import Header from '../../components/Header';
@@ -243,7 +243,7 @@ CC,87654321,Ana,María,López,Rodríguez,1995-03-22,FEMALE,ana.lopez@email.com,3
                 <Col md={8}>
                   <h6>Pasos para la carga masiva:</h6>
                   <ol>
-                    <li>Descargue la plantilla CSV haciendo clic en el botón "Descargar Plantilla"</li>
+                    <li>Descargue la plantilla CSV haciendo clic en el botón &quot;Descargar Plantilla&quot;</li>
                     <li>Complete la plantilla con los datos de los estudiantes</li>
                     <li>Suba el archivo completado usando el formulario a continuación</li>
                     <li>Revise los datos en la vista previa</li>

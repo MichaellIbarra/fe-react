@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Button, Form, InputGroup, Spinner, Modal, Card, Row, Col, Badge, Dropdown } from 'react-bootstrap';
 import { studentService } from '../../services/students';
-import { StudentStatus, Gender, DocumentType } from '../../types/students/student.types';
 import { exportStudentsCSV } from './studentReportService';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
@@ -282,7 +281,7 @@ const StudentList = () => {
       setShowDetails(true);
     } catch (error) {
       console.error('Error al cargar detalles del estudiante:', error);
-      toast.error('Error al cargar los detalles del estudiante');
+      setError('Error al cargar los detalles del estudiante');
     } finally {
       setLoadingDetails(false);
     }

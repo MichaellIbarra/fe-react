@@ -1,14 +1,78 @@
-import Institution from '../types/institution';
+import Institution from '../../types/institution';
+import { refreshTokenKeycloak } from '../../auth/authService';
 
 class InstitutionService {
   constructor() {
-    this.apiUrl = 'https://lab.vallegrande.edu.pe/school/ms-institution/api/v1/institutions'; // Cambia esta URL por la de tu API
+    this.apiUrl = 'https://lab.vallegrande.edu.pe/school/gateway/api/v1/institutions';
+    this.headquartersUrl = 'https://lab.vallegrande.edu.pe/school/gateway/api/v1/headquarters';
+  }
+
+  // Función auxiliar para obtener el token de acceso
+  getAuthToken() {
+    return localStorage.getItem('access_token');
+  }
+
+  // Función auxiliar para obtener headers con autenticación
+  getAuthHeaders() {
+    const token = this.getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  }
+
+  // Función auxiliar para realizar peticiones con manejo automático de renovación de token
+  async makeAuthenticatedRequest(url, options = {}) {
+    try {
+      let response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          ...this.getAuthHeaders()
+        }
+      });
+
+      // Si obtenemos 401, intentar renovar el token
+      if (response.status === 401) {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          const refreshResult = await refreshTokenKeycloak(refreshToken);
+          if (refreshResult.success) {
+            // Reintentar la petición con el nuevo token
+            response = await fetch(url, {
+              ...options,
+              headers: {
+                ...options.headers,
+                ...this.getAuthHeaders()
+              }
+            });
+          } else {
+            // Si no se puede renovar, redirigir al login
+            localStorage.clear();
+            window.location.href = '/auth/login';
+            throw new Error('Session expired. Please login again.');
+          }
+        } else {
+          // No hay refresh token, redirigir al login
+          localStorage.clear();
+          window.location.href = '/auth/login';
+          throw new Error('No authentication token found. Please login again.');
+        }
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Error in authenticated request:', error);
+      throw error;
+    }
   }
 
   // Obtener todas las instituciones
   async getAllInstitutions() {
     try {
-      const response = await fetch(this.apiUrl);
+      const response = await this.makeAuthenticatedRequest(this.apiUrl, {
+        method: 'GET'
+      });
       
       if (!response.ok) {
         throw new Error(`Error fetching institutions: ${response.status}`);
@@ -25,7 +89,9 @@ class InstitutionService {
   // Obtener institución por ID
   async getInstitutionById(id) {
     try {
-      const response = await fetch(`${this.apiUrl}/${id}`);
+      const response = await this.makeAuthenticatedRequest(`${this.apiUrl}/${id}`, {
+        method: 'GET'
+      });
       
       if (!response.ok) {
         throw new Error(`Error fetching institution: ${response.status}`);
@@ -44,9 +110,7 @@ class InstitutionService {
     try {
       const response = await fetch(this.apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(institutionData),
       });
       
@@ -67,9 +131,7 @@ class InstitutionService {
     try {
       const response = await fetch(`${this.apiUrl}/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(institutionData),
       });
       
@@ -90,6 +152,7 @@ class InstitutionService {
     try {
       const response = await fetch(`${this.apiUrl}/${id}`, {
         method: 'DELETE',
+        headers: this.getAuthHeaders()
       });
       
       if (!response.ok) {
@@ -108,6 +171,7 @@ class InstitutionService {
     try {
       const response = await fetch(`${this.apiUrl}/restore/${id}`, {
         method: 'PUT',
+        headers: this.getAuthHeaders()
       });
       
       if (!response.ok) {
@@ -127,9 +191,7 @@ class InstitutionService {
     try {
       const response = await fetch(`${this.apiUrl}/assign/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(directorData),
       });
       
@@ -148,7 +210,10 @@ class InstitutionService {
   // Obtener directores de una institución
   async getInstitutionDirectors(id) {
     try {
-      const response = await fetch(`${this.apiUrl}/${id}/directors`);
+      const response = await fetch(`${this.apiUrl}/${id}/directors`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
       
       if (!response.ok) {
         throw new Error(`Error fetching directors: ${response.status}`);
@@ -165,7 +230,10 @@ class InstitutionService {
   // Obtener sedes de una institución
   async getInstitutionHeadquarters(id) {
     try {
-      const response = await fetch(`${this.apiUrl}/${id}/headquarters`);
+      const response = await fetch(`${this.apiUrl}/${id}/headquarters`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
       
       if (!response.ok) {
         throw new Error(`Error fetching headquarters: ${response.status}`);
@@ -182,8 +250,9 @@ class InstitutionService {
   // Eliminar (inactivar) una sede
   async deleteHeadquarter(id) {
     try {
-      const response = await fetch(`https://lab.vallegrande.edu.pe/school/ms-institution/api/v1/headquarters/${id}`, {
+      const response = await fetch(`${this.headquartersUrl}/${id}`, {
         method: 'DELETE',
+        headers: this.getAuthHeaders()
       });
       
       if (!response.ok) {
@@ -200,8 +269,9 @@ class InstitutionService {
   // Restaurar una sede
   async restoreHeadquarter(id) {
     try {
-      const response = await fetch(`https://lab.vallegrande.edu.pe/school/ms-institution/api/v1/headquarters/restore/${id}`, {
+      const response = await fetch(`${this.headquartersUrl}/restore/${id}`, {
         method: 'PUT',
+        headers: this.getAuthHeaders()
       });
       
       if (!response.ok) {
@@ -226,11 +296,9 @@ class InstitutionService {
       
       console.log('Creating headquarter with data:', headquarterData);
       
-      const response = await fetch(`https://lab.vallegrande.edu.pe/school/ms-institution/api/v1/headquarters`, {
+      const response = await fetch(this.headquartersUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(headquarterData),
       });
       
@@ -256,11 +324,9 @@ class InstitutionService {
       
       console.log('Updating headquarter with data:', headquarterData);
       
-      const response = await fetch(`https://lab.vallegrande.edu.pe/school/ms-institution/api/v1/headquarters/${id}`, {
+      const response = await fetch(`${this.headquartersUrl}/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(headquarterData),
       });
       
@@ -279,7 +345,10 @@ class InstitutionService {
   // Obtener sede por ID
   async getHeadquarterById(id) {
     try {
-      const response = await fetch(`https://lab.vallegrande.edu.pe/school/ms-institution/api/v1/headquarters/${id}`);
+      const response = await fetch(`${this.headquartersUrl}/${id}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
       
       if (!response.ok) {
         throw new Error(`Error fetching headquarter: ${response.status}`);
@@ -303,7 +372,10 @@ class InstitutionService {
   // Método legacy para compatibilidad
   async getCurrentInstitution() {
     try {
-      const response = await fetch(this.apiUrl);
+      const response = await fetch(this.apiUrl, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
       
       if (!response.ok) {
         throw new Error(`Error fetching user profile: ${response.status}`);

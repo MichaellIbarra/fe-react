@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Spinner, Alert } from 'react-bootstrap';
-import { studentService, enrollmentService } from '../../services/students';
+import { Card, Spinner, Alert } from 'react-bootstrap';
+import { studentService } from '../../services/students';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 
 const EnrollmentStats = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState('');

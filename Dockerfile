@@ -34,34 +34,32 @@ COPY . .
 # Modificar package.json para usar más memoria si es necesario
 RUN sed -i 's/--max-old-space-size=4096/--max-old-space-size=8192/g' package.json || true
 
-# Crear archivo de configuración para build más tolerante a errores
-RUN echo '#!/bin/sh\n\
-export NODE_OPTIONS="--max-old-space-size=8192 --no-warnings"\n\
-export GENERATE_SOURCEMAP=false\n\
-export DISABLE_ESLINT_PLUGIN=true\n\
-export CI=true\n\
-export BUILD_PATH=build\n\
-export INLINE_RUNTIME_CHUNK=false\n\
-export IMAGE_INLINE_SIZE_LIMIT=0\n\
-export ESLINT_NO_DEV_ERRORS=true\n\
-export TSC_COMPILE_ON_ERROR=true\n\
-export SKIP_PREFLIGHT_CHECK=true\n\
-export FAST_REFRESH=false\n\
-\n\
-echo "Iniciando build con configuración optimizada..."\n\
-npm run build --silent 2>&1 | tee build.log || {\n\
-  echo "Primer intento falló, probando con configuración alternativa..."\n\
-  export NODE_OPTIONS="--max-old-space-size=6144"\n\
-  export GENERATE_SOURCEMAP=false\n\
-  npx react-scripts build --silent 2>&1 | tee build-alt.log || {\n\
-    echo "Segundo intento falló, usando configuración mínima..."\n\
-    export NODE_OPTIONS="--max-old-space-size=4096"\n\
-    CI=false npm run build 2>&1 | tee build-min.log\n\
-  }\n\
-}' > build.sh && chmod +x build.sh
-
-# Ejecutar build con script tolerante a errores
-RUN ./build.sh
+# Construir la aplicación con configuración robusta y fallback
+RUN set -e && \
+    echo "Iniciando build con configuración optimizada..." && \
+    (NODE_OPTIONS="--max-old-space-size=8192 --no-warnings" \
+     GENERATE_SOURCEMAP=false \
+     DISABLE_ESLINT_PLUGIN=true \
+     CI=true \
+     BUILD_PATH=build \
+     INLINE_RUNTIME_CHUNK=false \
+     IMAGE_INLINE_SIZE_LIMIT=0 \
+     ESLINT_NO_DEV_ERRORS=true \
+     TSC_COMPILE_ON_ERROR=true \
+     SKIP_PREFLIGHT_CHECK=true \
+     FAST_REFRESH=false \
+     npm run build) || \
+    (echo "Primer intento falló, probando configuración alternativa..." && \
+     NODE_OPTIONS="--max-old-space-size=6144 --no-warnings" \
+     GENERATE_SOURCEMAP=false \
+     DISABLE_ESLINT_PLUGIN=true \
+     CI=true \
+     npm run build) || \
+    (echo "Segundo intento falló, usando configuración mínima..." && \
+     NODE_OPTIONS="--max-old-space-size=4096" \
+     GENERATE_SOURCEMAP=false \
+     CI=false \
+     npm run build)
 
 # Limpiar caché y dependencias dev para liberar espacio
 RUN npm cache clean --force && \

@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Form, Row, Col, Button, Alert, Spinner } from 'react-bootstrap';
 import { studentService } from '../../services/students';
-import { DocumentType, Gender, GuardianRelationship, StudentStatus } from '../../types/students/student.types';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 
@@ -158,8 +157,7 @@ const AddStudent = () => {
 
       console.log('Datos a enviar:', studentData);
       
-      const response = await studentService.createStudent(studentData);
-      const createdStudent = response.data ? response.data : response;
+      await studentService.createStudent(studentData);
       
       setSuccess('Estudiante creado exitosamente');
       

@@ -7,7 +7,7 @@ import Sidebar from '../../../components/Sidebar';
 import { itemRender, onShowSizeChange } from '../../../components/Pagination';
 import { blogimg10, imagesend, pdficon, pdficon3, pdficon4, plusicon, refreshicon, searchnormal, blogimg12,
      blogimg2, blogimg4, blogimg6, blogimg8} from '../../../components/imagepath';
-import InstitutionService from '../../../services/institutionService';
+import InstitutionService from '../../../services/institutions/institutionService';
 import Institution from '../../../types/institution';
 import ExportUtils from '../../../utils/exportUtils';
 const InstitutionsAll = () => {

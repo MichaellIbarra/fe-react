@@ -17,7 +17,7 @@ import {
 import Header from '../../../components/Header';
 import Sidebar from '../../../components/Sidebar';
 import InstitutionStatsChart from '../../../components/Dashboard/Reports/InstitutionStatsChart';
-import institutionService from '../../../services/institutionService';
+import institutionService from '../../../services/institutions/institutionService';
 import { Spin, Card, Row, Col, Statistic, Select, DatePicker } from 'antd';
 import { FeatherIcon } from 'feather-icons-react';
 import '../../../assets/css/institution-reports.css';

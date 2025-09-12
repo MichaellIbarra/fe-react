@@ -8,7 +8,7 @@ import Header from '../../../components/Header';
 import Sidebar from '../../../components/Sidebar';
 import FeatherIcon from "feather-icons-react/build/FeatherIcon";
 import { Link } from 'react-router-dom';
-import InstitutionService from '../../../services/institutionService';
+import InstitutionService from '../../../services/institutions/institutionService';
 
 // Custom CSS for notification animation
 const notificationStyle = `

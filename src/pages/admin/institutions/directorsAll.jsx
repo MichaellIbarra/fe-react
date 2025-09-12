@@ -6,7 +6,7 @@ import Header from '../../../components/Header';
 import Sidebar from '../../../components/Sidebar';
 import { itemRender, onShowSizeChange } from '../../../components/Pagination';
 import { plusicon, refreshicon, searchnormal, pdficon, pdficon3, pdficon4 } from '../../../components/imagepath';
-import InstitutionService from '../../../services/institutionService';
+import InstitutionService from '../../../services/institutions/institutionService';
 
 const DirectorsAll = () => {
     const { id } = useParams();

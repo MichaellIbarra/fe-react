@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Button, Card, Spin } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../../services/students';
-import { DocumentType, Gender, GuardianRelationship } from '../../types/students/student.types';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import CustomAlert from '../common/CustomAlert';
@@ -181,8 +180,7 @@ const EditStudent = () => {
         status: values.status || 'ACTIVE'
       };
 
-      const response = await studentService.updateStudent(id, studentData);
-      const updatedStudent = response.data ? response.data : response;
+      await studentService.updateStudent(id, studentData);
       showAlert({
         title: 'Éxito',
         message: 'Estudiante actualizado correctamente',

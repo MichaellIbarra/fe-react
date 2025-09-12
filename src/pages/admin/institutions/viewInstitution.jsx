@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Header from '../../../components/Header';
 import Sidebar from '../../../components/Sidebar';
 import { Link } from 'react-router-dom';
-import InstitutionService from '../../../services/institutionService';
+import InstitutionService from '../../../services/institutions/institutionService';
 import FeatherIcon from "feather-icons-react/build/FeatherIcon";
 
 const ViewInstitution = () => {

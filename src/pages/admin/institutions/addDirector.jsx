@@ -5,7 +5,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Form, Input, Select, Button, Checkbox, Row, Col, Card, message, Spin } from 'antd';
 import Header from '../../../components/Header';
 import Sidebar from '../../../components/Sidebar';
-import InstitutionService from '../../../services/institutionService';
+import InstitutionService from '../../../services/institutions/institutionService';
 
 const { Option } = Select;
 
