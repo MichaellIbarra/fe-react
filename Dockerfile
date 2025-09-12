@@ -63,18 +63,17 @@ RUN chown -R nextjs:nodejs /usr/share/nginx/html && \
     chown -R nextjs:nodejs /var/run/nginx.pid
 
 # Configurar nginx para correr sin privilegios de root
-RUN sed -i '/user nginx;/d' /etc/nginx/nginx.conf && \
-    sed -i 's/listen\s*80;/listen 8080;/' /etc/nginx/conf.d/nginx.conf
+RUN sed -i '/user nginx;/d' /etc/nginx/nginx.conf
 
 # Cambiar a usuario no-root
 USER nextjs
 
-# Exponer el puerto 8080 (no privilegiado)
-EXPOSE 8080
+# Exponer el puerto 80
+EXPOSE 80
 
 # Comando de health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/ || exit 1
+  CMD curl -f http://localhost:80/ || exit 1
 
 # Comando para ejecutar nginx
 CMD ["nginx", "-g", "daemon off;"]
