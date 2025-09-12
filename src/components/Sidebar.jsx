@@ -263,6 +263,63 @@ const Sidebar = (props) => {
                   </ul>
                 </li>
                 {/* End Directors Submenu */}
+
+                {/* Admin/Director Users Management */}
+                <li className="submenu">
+                  <Link to="#" id="menu-item-admin-users" onClick={(e) => handleClick(e, "menu-item-admin-users", "menu-items-admin-users")}>
+                    <span className="menu-side">
+                      <i className="fa fa-users"></i>
+                    </span>{" "}
+                    <span>Admin/Director</span> <span className="menu-arrow" />
+                  </Link>
+                  <ul style={{ display: "none" }} className="menu-items-admin-users">
+                    <li>
+                      <Link className={props?.activeClassName === 'admin-director-users-list' ? 'active' : ''} to="/admin-director/users">Lista de Usuarios</Link>
+                    </li>
+                    <li>
+                      <Link className={props?.activeClassName === 'admin-director-users-create' ? 'active' : ''} to="/admin-director/users/create">Crear Usuario</Link>
+                    </li>
+                  </ul>
+                </li>
+                {/* End Admin/Director Users Management */}
+
+                {/* Director Personal Management */}
+                <li className="submenu">
+                  <Link to="#" id="menu-item-director-personal" onClick={(e) => handleClick(e, "menu-item-director-personal", "menu-items-director-personal")}>
+                    <span className="menu-side">
+                      <i className="fa fa-user-tie"></i>
+                    </span>{" "}
+                    <span>Personal Director</span> <span className="menu-arrow" />
+                  </Link>
+                  <ul style={{ display: "none" }} className="menu-items-director-personal">
+                    <li>
+                      <Link className={props?.activeClassName === 'director-personal-list' ? 'active' : ''} to="/admin-director/director-personal">Lista de Personal</Link>
+                    </li>
+                    <li>
+                      <Link className={props?.activeClassName === 'director-personal-create' ? 'active' : ''} to="/admin-director/director-personal/create">Crear Personal</Link>
+                    </li>
+                  </ul>
+                </li>
+                {/* End Director Personal Management */}
+
+                {/* User Institution Management */}
+                <li className="submenu">
+                  <Link to="#" id="menu-item-user-institution" onClick={(e) => handleClick(e, "menu-item-user-institution", "menu-items-user-institution")}>
+                    <span className="menu-side">
+                      <i className="fa fa-university"></i>
+                    </span>{" "}
+                    <span>Usuario-Institución</span> <span className="menu-arrow" />
+                  </Link>
+                  <ul style={{ display: "none" }} className="menu-items-user-institution">
+                    <li>
+                      <Link className={props?.activeClassName === 'user-institution-list' ? 'active' : ''} to="/admin-director/user-institution">Lista de Relaciones</Link>
+                    </li>
+                    <li>
+                      <Link className={props?.activeClassName === 'user-institution-create' ? 'active' : ''} to="/admin-director/user-institution/create">Asignar Usuario</Link>
+                    </li>
+                  </ul>
+                </li>
+                {/* End User Institution Management */}
               </ul>
               <div className="logout-btn">
                 <Link to="/login">
