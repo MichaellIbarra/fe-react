@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Form, Button, Row, Col } from 'react-bootstrap';
-import { enrollmentService } from '../../services/enrollmentService';
+import { enrollmentService } from '../../services/students/enrollmentService';
 import { classroomService } from '../../services/classroomService';
-import { studentService } from '../../services/studentService';
+import { studentService } from '../../services/students/studentService';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import CustomAlert from '../common/CustomAlert';

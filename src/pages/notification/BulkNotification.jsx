@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap';
 import { notificationService } from '../../services/notificationService';
-import { studentService } from '../../services';
+import { studentService } from '../../services/students';
 import { teacherService } from '../../services/teacherService';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';

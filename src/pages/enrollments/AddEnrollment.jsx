@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Button, Row, Col } from 'react-bootstrap';
-import { enrollmentService } from '../../services/enrollmentService';
-import { classroomService } from '../../services/classroomService';
-import { studentService } from '../../services/studentService';
+import { Form, Button, Row, Col, Card, Spinner } from 'react-bootstrap';
+import { enrollmentService, studentService } from '../../services/students';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import CustomAlert from '../common/CustomAlert';
@@ -16,10 +14,8 @@ const AddEnrollment = () => {
   const [formData, setFormData] = useState({
     studentId: '',
     classroomId: '',
-    enrollmentDate: new Date().toISOString().split('T')[0],
-    enrollmentYear: new Date().getFullYear().toString(),
-    enrollmentPeriod: `${new Date().getFullYear()}-${Math.ceil((new Date().getMonth() + 1) / 6)}`,
-    status: 'A'
+    enrollmentNumber: '',
+    enrollmentDate: new Date().toISOString().split('T')[0]
   });
   const [alert, setAlert] = useState({
     show: false,
@@ -42,12 +38,9 @@ const AddEnrollment = () => {
       try {
         setLoading(true);
         
-        // Cargar aulas y estudiantes
-        const [enrollmentsData, studentsData, classroomsData] = await Promise.all([
-          enrollmentService.getAllEnrollments(),
-          studentService.getAllStudents(),
-          classroomService.getAllClassrooms()
-        ]);
+        // Cargar estudiantes activos
+        const studentsResponse = await studentService.getActiveStudents();
+        const studentsData = studentsResponse.data ? studentsResponse.data : studentsResponse;
 
         // Filtrar estudiantes que no tienen matrícula activa
         const activeEnrollments = enrollmentsData.filter(e => e.status === 'A');
