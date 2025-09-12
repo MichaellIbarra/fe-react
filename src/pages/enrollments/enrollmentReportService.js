@@ -1,7 +1,7 @@
 export const exportClassroomStudentsCSV = async () => {
   try {
-    const baseUrl = 'http://localhost:8102/api/v1';
-    const response = await fetch(`${baseUrl}/classroom-students/export`, {
+    const baseUrl = 'https://lab.vallegrande.edu.pe/school/gateway/api/v1';
+    const response = await fetch(`${baseUrl}/enrollments/export`, {
       method: 'GET',
       headers: {
         'Accept': 'text/csv',
