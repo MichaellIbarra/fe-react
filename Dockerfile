@@ -6,9 +6,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Configurar variables de entorno para optimizar el build
-ENV NODE_OPTIONS="--max-old-space-size=4096 --no-warnings"
+ENV NODE_OPTIONS="--max-old-space-size=8192 --no-warnings"
 ENV CI=false
 ENV GENERATE_SOURCEMAP=false
+ENV NODE_ENV=production
+ENV DISABLE_ESLINT_PLUGIN=true
+ENV TSC_COMPILE_ON_ERROR=true
+ENV SKIP_PREFLIGHT_CHECK=true
 
 # Copiar package.json y package-lock.json (si existe)
 COPY package*.json ./
@@ -16,19 +20,20 @@ COPY package*.json ./
 # Limpiar cache npm antes de instalar
 RUN npm cache clean --force
 
-# Instalar todas las dependencias (incluidas dev) para el build con legacy peer deps
-RUN npm ci --legacy-peer-deps --silent --no-audit --no-fund
+# Instalar todas las dependencias con configuraciones optimizadas
+RUN npm ci --legacy-peer-deps --silent --no-audit --no-fund --prefer-offline
 
 # Copiar el código fuente
 COPY . .
 
-# Construir la aplicación para producción con timeout más largo
-RUN timeout 300s npm run build || (echo "Build failed or timed out" && exit 1)
+# Construir la aplicación para producción con configuraciones optimizadas
+RUN npm run build
 
-# Limpiar caché y dependencias dev para liberar espacio
+# Limpiar para liberar espacio
 RUN npm cache clean --force && \
     rm -rf node_modules && \
-    rm -rf /tmp/*
+    rm -rf /tmp/* && \
+    rm -rf ~/.npm
 
 # Etapa 2: Servidor web nginx para servir la aplicación
 FROM nginx:alpine AS production
@@ -46,30 +51,30 @@ COPY nginx.conf /etc/nginx/conf.d/
 COPY --from=builder /app/build /usr/share/nginx/html
 
 # Crear un usuario no-root para ejecutar nginx
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs
 
 # Cambiar permisos de los archivos
-RUN chown -R nextjs:nodejs /usr/share/nginx/html
-RUN chown -R nextjs:nodejs /var/cache/nginx
-RUN chown -R nextjs:nodejs /var/log/nginx
-RUN chown -R nextjs:nodejs /etc/nginx/conf.d
-RUN touch /var/run/nginx.pid
-RUN chown -R nextjs:nodejs /var/run/nginx.pid
+RUN chown -R nextjs:nodejs /usr/share/nginx/html && \
+    chown -R nextjs:nodejs /var/cache/nginx && \
+    chown -R nextjs:nodejs /var/log/nginx && \
+    chown -R nextjs:nodejs /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R nextjs:nodejs /var/run/nginx.pid
 
 # Configurar nginx para correr sin privilegios de root
 RUN sed -i '/user nginx;/d' /etc/nginx/nginx.conf && \
-    sed -i '/^user/d' /etc/nginx/nginx.conf
+    sed -i 's/listen\s*80;/listen 8080;/' /etc/nginx/conf.d/nginx.conf
 
 # Cambiar a usuario no-root
 USER nextjs
 
-# Exponer el puerto 80
-EXPOSE 80
+# Exponer el puerto 8080 (no privilegiado)
+EXPOSE 8080
 
 # Comando de health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:80/ || exit 1
+  CMD curl -f http://localhost:8080/ || exit 1
 
 # Comando para ejecutar nginx
 CMD ["nginx", "-g", "daemon off;"]

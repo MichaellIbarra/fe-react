@@ -1,4 +1,4 @@
-import Institution from '../types/institution';
+import Institution from '../../types/institution';
 
 class InstitutionService {
   constructor() {
