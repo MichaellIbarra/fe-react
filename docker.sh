@@ -7,9 +7,9 @@ set -e
 echo "🚀 Iniciando construcción de EduAssist Frontend..."
 
 # Variables
-IMAGE_NAME="eduassist-frontend"
+IMAGE_NAME="michaellibarra/preclinic-react-app"
 IMAGE_TAG="latest"
-CONTAINER_NAME="eduassist-frontend-container"
+CONTAINER_NAME="preclinic-frontend-container"
 
 # Función para mostrar ayuda
 show_help() {
@@ -22,6 +22,7 @@ show_help() {
     echo "  clean     Limpiar imágenes y contenedores"
     echo "  logs      Mostrar logs del contenedor"
     echo "  shell     Abrir shell en el contenedor"
+    echo "  debug     Construir con debug habilitado"
     echo "  help      Mostrar esta ayuda"
     echo ""
 }
@@ -31,6 +32,13 @@ build_image() {
     echo "📦 Construyendo imagen Docker..."
     docker build -t $IMAGE_NAME:$IMAGE_TAG .
     echo "✅ Imagen construida exitosamente: $IMAGE_NAME:$IMAGE_TAG"
+}
+
+# Función para construir con debug
+build_debug() {
+    echo "🔍 Construyendo imagen Docker con debug..."
+    docker build --no-cache -t $IMAGE_NAME:debug .
+    echo "✅ Imagen debug construida: $IMAGE_NAME:debug"
 }
 
 # Función para ejecutar el contenedor
@@ -51,7 +59,11 @@ run_container() {
         --restart unless-stopped \
         $IMAGE_NAME:$IMAGE_TAG
     
-    echo "✅ Contenedor ejecutándose en http://localhost:3000"
+    echo "✅ Contenedor ejecutándose en:"
+    echo "   🌐 http://localhost:3000"
+    echo "   📱 http://localhost:3000/school (Aplicación)"
+    echo ""
+    echo "Para ver logs: ./docker.sh logs"
 }
 
 # Función para detener el contenedor
@@ -68,6 +80,7 @@ clean_docker() {
     docker stop $CONTAINER_NAME 2>/dev/null || true
     docker rm $CONTAINER_NAME 2>/dev/null || true
     docker rmi $IMAGE_NAME:$IMAGE_TAG 2>/dev/null || true
+    docker rmi $IMAGE_NAME:debug 2>/dev/null || true
     docker system prune -f
     echo "✅ Limpieza completada"
 }
@@ -104,6 +117,9 @@ case "${1:-help}" in
         ;;
     shell)
         open_shell
+        ;;
+    debug)
+        build_debug
         ;;
     help|*)
         show_help
