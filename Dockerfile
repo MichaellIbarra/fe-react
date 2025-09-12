@@ -43,7 +43,6 @@ RUN apk add --no-cache curl
 
 # Remover la configuración por defecto de nginx
 RUN rm -f /etc/nginx/conf.d/default.conf
-RUN rm -f /etc/nginx/conf.d/*.conf
 
 # Copiar configuración personalizada de nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -51,21 +50,15 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copiar los archivos construidos desde la etapa anterior
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Crear directorios necesarios y establecer permisos
-RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
-    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /var/run && \
-    chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /etc/nginx/conf.d
-
-# No cambiar a usuario no-root para poder usar puerto 80
-# USER nginx está configurado en nginx.conf
+# Verificar que los archivos se copiaron correctamente
+RUN ls -la /usr/share/nginx/html/
 
 # Exponer el puerto 80
 EXPOSE 80
 
 # Comando de health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+  CMD curl -f http://localhost/school || exit 1
 
 # Comando para ejecutar nginx
 CMD ["nginx", "-g", "daemon off;"]
