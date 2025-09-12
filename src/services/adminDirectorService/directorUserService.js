@@ -266,7 +266,7 @@ class DirectorUserService {
       documentType: userData.documentType,
       documentNumber: userData.documentNumber?.trim(),
       phone: userData.phone?.trim() || null,
-      status: userData.status || 'A'
+      status: userData.status || 'ACTIVE'
     };
   }
 }
