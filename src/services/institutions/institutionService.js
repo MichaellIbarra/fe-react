@@ -21,6 +21,13 @@ class InstitutionService {
     };
   }
 
+  // Función auxiliar para extraer datos de la respuesta de la API
+  extractResponseData(responseData) {
+    // La nueva API devuelve datos en el formato: { metadata: {...}, data: [...] }
+    // Si no existe 'data', asumir que responseData es directamente el contenido
+    return responseData.data || responseData;
+  }
+
   // Función auxiliar para realizar peticiones con manejo automático de renovación de token
   async makeAuthenticatedRequest(url, options = {}) {
     try {
@@ -78,8 +85,15 @@ class InstitutionService {
         throw new Error(`Error fetching institutions: ${response.status}`);
       }
       
-      const data = await response.json();
-      return data.map(institution => new Institution(institution));
+      const responseData = await response.json();
+      const institutions = this.extractResponseData(responseData);
+      
+      if (!Array.isArray(institutions)) {
+        console.error('Expected array of institutions, got:', institutions);
+        throw new Error('Invalid response format: expected array of institutions');
+      }
+      
+      return institutions.map(institution => new Institution(institution));
     } catch (error) {
       console.error('Error in InstitutionService.getAllInstitutions:', error);
       throw error;
@@ -97,8 +111,10 @@ class InstitutionService {
         throw new Error(`Error fetching institution: ${response.status}`);
       }
       
-      const data = await response.json();
-      return new Institution(data);
+      const responseData = await response.json();
+      const institutionData = this.extractResponseData(responseData);
+      
+      return new Institution(institutionData);
     } catch (error) {
       console.error('Error in InstitutionService.getInstitutionById:', error);
       throw error;
@@ -108,9 +124,8 @@ class InstitutionService {
   // Crear una nueva institución
   async createInstitution(institutionData) {
     try {
-      const response = await fetch(this.apiUrl, {
+      const response = await this.makeAuthenticatedRequest(this.apiUrl, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
         body: JSON.stringify(institutionData),
       });
       
@@ -118,8 +133,10 @@ class InstitutionService {
         throw new Error(`Error creating institution: ${response.status}`);
       }
       
-      const data = await response.json();
-      return new Institution(data);
+      const responseData = await response.json();
+      const institutionCreated = this.extractResponseData(responseData);
+      
+      return new Institution(institutionCreated);
     } catch (error) {
       console.error('Error in InstitutionService.createInstitution:', error);
       throw error;
@@ -129,9 +146,8 @@ class InstitutionService {
   // Actualizar una institución
   async updateInstitution(id, institutionData) {
     try {
-      const response = await fetch(`${this.apiUrl}/${id}`, {
+      const response = await this.makeAuthenticatedRequest(`${this.apiUrl}/${id}`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
         body: JSON.stringify(institutionData),
       });
       
@@ -139,8 +155,10 @@ class InstitutionService {
         throw new Error(`Error updating institution: ${response.status}`);
       }
       
-      const data = await response.json();
-      return new Institution(data);
+      const responseData = await response.json();
+      const institutionUpdated = this.extractResponseData(responseData);
+      
+      return new Institution(institutionUpdated);
     } catch (error) {
       console.error('Error in InstitutionService.updateInstitution:', error);
       throw error;
