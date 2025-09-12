@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Button, Tag, Avatar } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
-import { studentService } from '../../services';
+import { studentService } from '../../services/students';
 import moment from 'moment';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';

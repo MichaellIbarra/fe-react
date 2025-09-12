@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Form, InputGroup, Spinner, Modal, Card, Row, Col } from 'react-bootstrap';
-import { enrollmentService } from '../../services/enrollmentService';
-import { studentService } from '../../services/studentService';
-import { classroomService } from '../../services/classroomService';
+import { Table, Button, Form, InputGroup, Spinner, Modal, Card, Row, Col, Badge, Dropdown } from 'react-bootstrap';
+import { enrollmentService, studentService } from '../../services/students';
+import { EnrollmentStatus, EnrollmentStatusLabels, EnrollmentStatusColors } from '../../types/students/enrollment.types';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import CustomAlert from '../common/CustomAlert';
+import { exportClassroomStudentsCSV } from './enrollmentReportService';
 
 const EnrollmentList = () => {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ const EnrollmentList = () => {
   const [classroomDetails, setClassroomDetails] = useState({});
   const [processingAction, setProcessingAction] = useState(false);
   const [filters, setFilters] = useState({
-    status: 'A',
+    status: 'ACTIVE',
     classroom: 'all',
     year: 'all',
     period: 'all'
@@ -37,7 +37,8 @@ const EnrollmentList = () => {
     if (!studentId || studentDetails[studentId]) return;
     
     try {
-      const student = await studentService.getStudentById(studentId);
+      const response = await studentService.getStudentById(studentId);
+      const student = response.data ? response.data : response;
       setStudentDetails(prev => ({
         ...prev,
         [studentId]: student
@@ -66,19 +67,28 @@ const EnrollmentList = () => {
       setLoading(true);
       setError('');
       
-      const enrollmentsData = await enrollmentService.getAllEnrollments();
-      setEnrollments(enrollmentsData);
-
-      // Cargar detalles de estudiantes y aulas
-      const promises = enrollmentsData.flatMap(enrollment => [
-        loadStudentDetails(enrollment.studentId),
-        loadClassroomDetails(enrollment.classroomId)
-      ]);
+      let enrollmentsResponse;
+      if (filters.status === 'all') {
+        enrollmentsResponse = await enrollmentService.getAllEnrollments();
+      } else {
+        enrollmentsResponse = await enrollmentService.getEnrollmentsByStatus(filters.status);
+      }
       
-      await Promise.all(promises);
+      // Extraer la data del response si viene en formato API Response
+      const enrollmentsData = enrollmentsResponse.data ? enrollmentsResponse.data : enrollmentsResponse;
+      setEnrollments(Array.isArray(enrollmentsData) ? enrollmentsData : []);
+
+      // Cargar detalles de estudiantes para cada matrícula
+      if (Array.isArray(enrollmentsData)) {
+        const promises = enrollmentsData.map(enrollment => 
+          loadStudentDetails(enrollment.studentId)
+        );
+        await Promise.all(promises);
+      }
     } catch (error) {
       console.error('Error al cargar matrículas:', error);
       setError('Error al cargar los datos. Por favor, intente nuevamente.');
+      setEnrollments([]);
     } finally {
       setLoading(false);
     }
@@ -289,6 +299,7 @@ const EnrollmentList = () => {
                 <span className="visually-hidden">Cargando...</span>
               </Spinner>
             </div>
+          <button onClick={exportClassroomStudentsCSV} style={{marginBottom: '1rem'}}>Exportar matrículas CSV</button>
           </div>
         </div>
       </>
@@ -316,6 +327,14 @@ const EnrollmentList = () => {
                 >
                   <i className="fas fa-plus me-2"></i>
                   Agregar Matrícula
+                </Button>
+                <Button
+                  variant="outline-primary"
+                  onClick={exportClassroomStudentsCSV}
+                  style={{marginLeft: '10px'}}
+                >
+                  <i className="fas fa-file-csv me-2"></i>
+                  Exportar CSV
                 </Button>
               </div>
             </div>
