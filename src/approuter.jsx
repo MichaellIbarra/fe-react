@@ -43,6 +43,23 @@ import EditHeadquarters from "./pages/admin/institutions/editHeadquarters";
 import InstitutionHeadquartersReport from "./pages/admin/reports/InstitutionHeadquartersReport";
 import Attendence from "./pages/teacher/attendance/Attendence";
 import Justifications from "./pages/teacher/attendance/Justifications";
+
+//Admin Director Users
+import AdminDirectorUserList from "./pages/adminDirector/AdminDirectorUserList";
+import AdminDirectorUserCreate from "./pages/adminDirector/AdminDirectorUserCreate";
+import AdminDirectorUserEdit from "./pages/adminDirector/AdminDirectorUserEdit";
+import AdminDirectorUserView from "./pages/adminDirector/AdminDirectorUserView";
+//Director Personal Users
+import DirectorPersonalList from "./pages/adminDirector/directorPersonal/DirectorPersonalList";
+import DirectorPersonalCreate from "./pages/adminDirector/directorPersonal/DirectorPersonalCreate";
+import DirectorPersonalEdit from "./pages/adminDirector/directorPersonal/DirectorPersonalEdit";
+import DirectorPersonalView from "./pages/adminDirector/directorPersonal/DirectorPersonalView";
+//User Institution Management
+import UserInstitutionList from "./pages/adminDirector/userInstitution/UserInstitutionList";
+import UserInstitutionCreate from "./pages/adminDirector/userInstitution/UserInstitutionCreate";
+import UserInstitutionEdit from "./pages/adminDirector/userInstitution/UserInstitutionEdit";
+import UserInstitutionView from "./pages/adminDirector/userInstitution/UserInstitutionView";
+
 //Accounts
 const Approuter = () => {
   // eslint-disable-next-line no-unused-vars
@@ -71,6 +88,26 @@ const Approuter = () => {
           <Route path="/institution-headquarters/:id" element={<HeadquartersAll />} />
           <Route path="/add-headquarter/:id" element={<AddHeadquarters />} />
           <Route path="/edit-headquarter/:id" element={<EditHeadquarters />} />
+
+          {/* Admin Director Users Routes */}
+          <Route path="/admin-director/users" element={<AdminDirectorUserList />} />
+          <Route path="/admin-director/users/create" element={<AdminDirectorUserCreate />} />
+          <Route path="/admin-director/users/:keycloakId/view" element={<AdminDirectorUserView />} />
+          <Route path="/admin-director/users/:keycloakId/edit" element={<AdminDirectorUserEdit />} />
+
+          {/* Director Personal Users Routes */}
+          <Route path="/admin-director/director-personal" element={<DirectorPersonalList />} />
+          <Route path="/admin-director/director-personal/create" element={<DirectorPersonalCreate />} />
+          <Route path="/admin-director/director-personal/:keycloakId/view" element={<DirectorPersonalView />} />
+          <Route path="/admin-director/director-personal/:keycloakId/edit" element={<DirectorPersonalEdit />} />
+
+          {/* User Institution Management Routes */}
+          <Route path="/admin-director/user-institution" element={<UserInstitutionList />} />
+          <Route path="/admin-director/user-institution/create" element={<UserInstitutionCreate />} />
+          <Route path="/admin-director/user-institution/view/:userId" element={<UserInstitutionView />} />
+          <Route path="/admin-director/user-institution/edit/:userId" element={<UserInstitutionEdit />} />
+
+
 
           {/* Reports Routes */}
           <Route path="/reports/institutions-headquarters" element={<InstitutionHeadquartersReport />} />
