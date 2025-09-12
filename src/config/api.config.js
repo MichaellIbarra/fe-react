@@ -1,12 +1,26 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://lab.vallegrande.edu.pe/school/ms-student/api/v1',
+  baseURL: 'https://lab.vallegrande.edu.pe/school/gateway/api/v1',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
 });
+
+// Interceptor para agregar el token de autorización
+apiClient.interceptors.request.use(
+  config => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
 
 // Interceptor para manejar errores
 apiClient.interceptors.response.use(

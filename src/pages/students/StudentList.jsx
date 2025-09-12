@@ -1,11 +1,104 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Form, InputGroup, Spinner, Modal, Card, Row, Col } from 'react-bootstrap';
-import { studentService } from '../../services';
+import { Table, Button, Form, InputGroup, Spinner, Modal, Card, Row, Col, Badge, Dropdown } from 'react-bootstrap';
+import { studentService } from '../../services/students';
+import { StudentStatus, Gender, DocumentType } from '../../types/students/student.types';
+import { exportStudentsCSV } from './studentReportService';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import CustomAlert from '../common/CustomAlert';
 import './StudentList.css';
+
+// Funciones auxiliares para formatear datos
+const formatDate = (dateValue) => {
+  if (!dateValue) return 'No especificada';
+  
+  try {
+    let date;
+    
+    // Si es un array [año, mes, día] o [año, mes, día, hora, minuto, segundo, nanosegundos]
+    if (Array.isArray(dateValue)) {
+      const [year, month, day] = dateValue;
+      date = new Date(year, month - 1, day); // month - 1 porque los meses van de 0-11
+    } else {
+      date = new Date(dateValue);
+    }
+    
+    if (isNaN(date.getTime())) return 'Fecha inválida';
+    
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch (error) {
+    return 'Fecha inválida';
+  }
+};
+
+const formatDateTime = (dateTimeValue) => {
+  if (!dateTimeValue) return 'No especificada';
+  
+  try {
+    let date;
+    
+    // Si es un array [año, mes, día, hora, minuto, segundo, nanosegundos]
+    if (Array.isArray(dateTimeValue)) {
+      const [year, month, day, hour = 0, minute = 0, second = 0] = dateTimeValue;
+      date = new Date(year, month - 1, day, hour, minute, second);
+    } else {
+      date = new Date(dateTimeValue);
+    }
+    
+    if (isNaN(date.getTime())) return 'Fecha inválida';
+    
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return 'Fecha inválida';
+  }
+};
+
+const formatDocumentType = (type) => {
+  const types = {
+    'DNI': 'DNI',
+    'CE': 'Carnet de Extranjería',
+    'PASAPORTE': 'Pasaporte',
+    'TI': 'Tarjeta de Identidad'
+  };
+  return types[type] || type || 'No especificado';
+};
+
+const formatGender = (gender) => {
+  const genders = {
+    'MALE': 'Masculino',
+    'FEMALE': 'Femenino',
+    'M': 'Masculino',
+    'F': 'Femenino'
+  };
+  return genders[gender] || gender || 'No especificado';
+};
+
+const formatStatus = (status) => {
+  return status === 'ACTIVE' || status === 'A' ? 'Activo' : 'Inactivo';
+};
+
+const formatRelationship = (relationship) => {
+  const relationships = {
+    'MOTHER': 'Madre',
+    'FATHER': 'Padre',
+    'GUARDIAN': 'Tutor/a',
+    'GRANDPARENT': 'Abuelo/a',
+    'UNCLE_AUNT': 'Tío/a',
+    'OTHER': 'Otro'
+  };
+  return relationships[relationship] || relationship || 'No especificado';
+};
 
 const StudentList = () => {
   const navigate = useNavigate();
@@ -15,12 +108,13 @@ const StudentList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [processingAction, setProcessingAction] = useState(false);
   const [filters, setFilters] = useState({
-    status: 'A',
+    status: 'ACTIVE',
     gender: 'all',
     documentType: 'all'
   });
   const [showDetails, setShowDetails] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [alert, setAlert] = useState({
     show: false,
     title: '',
@@ -33,11 +127,36 @@ const StudentList = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await studentService.getAllStudents();
-      setStudents(data);
+      
+      let response;
+      if (filters.status === 'all') {
+        response = await studentService.getAllStudents();
+      } else {
+        response = await studentService.getStudentsByStatus(filters.status);
+      }
+      
+      console.log('Response from API:', response);
+      
+      // Manejar diferentes formatos de respuesta
+      let studentsData = [];
+      if (response && response.data && Array.isArray(response.data)) {
+        // Formato: {metadata: {...}, data: [...]}
+        studentsData = response.data;
+      } else if (Array.isArray(response)) {
+        // Formato directo: [...]
+        studentsData = response;
+      } else if (response && Array.isArray(response.data)) {
+        // Otro formato posible
+        studentsData = response.data;
+      }
+      
+      console.log('Students data processed:', studentsData);
+      setStudents(studentsData);
+      
     } catch (error) {
       console.error('Error al cargar estudiantes:', error);
       setError('Error al cargar los datos. Por favor, intente nuevamente.');
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -46,6 +165,12 @@ const StudentList = () => {
   useEffect(() => {
     loadStudents();
   }, []);
+                  <Button 
+                    onClick={exportStudentsCSV} 
+                    style={{marginBottom: '1rem'}}
+                  >
+                    Exportar estudiantes CSV
+                  </Button>
 
   const showAlert = (config) => {
     setAlert({ ...config, show: true });
@@ -68,7 +193,7 @@ const StudentList = () => {
             setStudents(prevStudents => 
               prevStudents.map(student => 
                 student.id === id 
-                  ? { ...student, status: 'I' }
+                  ? { ...student, status: 'INACTIVE' }
                   : student
               )
             );
@@ -111,10 +236,12 @@ const StudentList = () => {
         type: 'warning',
         onConfirm: async () => {
           try {
-            const updatedStudent = await studentService.restoreStudent(id);
+            await studentService.restoreStudent(id);
             setStudents(prevStudents => 
               prevStudents.map(student => 
-                student.id === id ? updatedStudent : student
+                student.id === id 
+                  ? { ...student, status: 'ACTIVE' }
+                  : student
               )
             );
             showAlert({
@@ -147,9 +274,18 @@ const StudentList = () => {
     }
   };
 
-  const handleShowDetails = (student) => {
-    setSelectedStudent(student);
-    setShowDetails(true);
+  const handleShowDetails = async (student) => {
+    try {
+      setLoadingDetails(true);
+      const studentDetails = await studentService.getStudentById(student.id);
+      setSelectedStudent(studentDetails);
+      setShowDetails(true);
+    } catch (error) {
+      console.error('Error al cargar detalles del estudiante:', error);
+      toast.error('Error al cargar los detalles del estudiante');
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleCloseDetails = () => {
@@ -165,11 +301,14 @@ const StudentList = () => {
   };
 
   const getUniqueValues = (field) => {
+    if (!Array.isArray(students)) {
+      return [];
+    }
     const values = new Set(students.map(s => s[field]));
     return Array.from(values).sort();
   };
 
-  const filteredStudents = students.filter(student => {
+  const filteredStudents = Array.isArray(students) ? students.filter(student => {
     if (!student) return false;
     
     // Aplicar filtros
@@ -185,14 +324,22 @@ const StudentList = () => {
       return false;
     }
 
-    const searchString = searchTerm.toLowerCase();
-    return (
-      student.firstName?.toLowerCase().includes(searchString) ||
-      student.lastName?.toLowerCase().includes(searchString) ||
-      student.documentNumber?.toLowerCase().includes(searchString) ||
-      student.email?.toLowerCase().includes(searchString)
-    );
-  });
+    // Búsqueda por término
+    if (searchTerm) {
+      const searchString = searchTerm.toLowerCase();
+      return (
+        student.firstName?.toLowerCase().includes(searchString) ||
+        student.lastName?.toLowerCase().includes(searchString) ||
+        student.documentNumber?.toLowerCase().includes(searchString) ||
+        student.email?.toLowerCase().includes(searchString) ||
+        student.phone?.toLowerCase().includes(searchString) ||
+        student.guardianName?.toLowerCase().includes(searchString) ||
+        student.guardianLastName?.toLowerCase().includes(searchString)
+      );
+    }
+
+    return true;
+  }) : [];
 
   if (loading) {
     return (
@@ -203,7 +350,7 @@ const StudentList = () => {
           <div className="content container-fluid">
             <div className="text-center mt-5">
               <Spinner animation="border" role="status">
-                <span className="visually-hidden">Cargando...</span>
+                <span className="visually-hidden">Cargando Data...</span>
               </Spinner>
             </div>
           </div>
@@ -234,6 +381,34 @@ const StudentList = () => {
                   <i className="fas fa-plus me-2"></i>
                   Agregar Estudiante
                 </Button>
+                <Button
+                  variant="outline-primary"
+                  onClick={exportStudentsCSV}
+                  style={{marginLeft: '10px'}}
+                >
+                  <i className="fas fa-file-csv me-2"></i>
+                  Exportar CSV
+                </Button>
+                <Dropdown style={{marginLeft: '10px'}}>
+                  <Dropdown.Toggle variant="outline-secondary" id="dropdown-advanced">
+                    <i className="fas fa-cogs me-2"></i>
+                    Opciones Avanzadas
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Item onClick={() => navigate('/students/not-enrolled')}>
+                      <i className="fas fa-user-slash me-2"></i>
+                      Estudiantes No Matriculados
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => navigate('/students/bulk-upload')}>
+                      <i className="fas fa-upload me-2"></i>
+                      Carga Masiva
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => navigate('/students/statistics')}>
+                      <i className="fas fa-chart-bar me-2"></i>
+                      Estadísticas de Matrícula
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
               </div>
             </div>
           </div>
@@ -252,8 +427,11 @@ const StudentList = () => {
                             onChange={(e) => handleFilterChange('status', e.target.value)}
                             className="form-select-sm"
                           >
-                            <option value="A">Activos</option>
-                            <option value="I">Inactivos</option>
+                            <option value="ACTIVE">Activos</option>
+                            <option value="INACTIVE">Inactivos</option>
+                            <option value="TRANSFERRED">Transferidos</option>
+                            <option value="GRADUATED">Graduados</option>
+                            <option value="DECEASED">Fallecidos</option>
                             <option value="all">Todos los estados</option>
                           </Form.Select>
                         </Form.Group>
@@ -267,8 +445,8 @@ const StudentList = () => {
                             className="form-select-sm"
                           >
                             <option value="all">Todos los géneros</option>
-                            <option value="M">Masculino</option>
-                            <option value="F">Femenino</option>
+                            <option value="MALE">Masculino</option>
+                            <option value="FEMALE">Femenino</option>
                           </Form.Select>
                         </Form.Group>
                       </div>
@@ -366,6 +544,7 @@ const StudentList = () => {
                           <th>Datos del Estudiante</th>
                           <th>Documento</th>
                           <th>Género</th>
+                          <th>Estado</th>
                           <th>Contacto</th>
                           <th className="text-end">Acciones</th>
                         </tr>
@@ -384,10 +563,30 @@ const StudentList = () => {
                               </span>
                             </td>
                             <td data-label="Género">
-                              <span className={`badge ${student.gender === 'M' ? 'bg-info' : 'bg-pink'}`}>
-                                <i className={`fas fa-${student.gender === 'M' ? 'mars' : 'venus'} me-1`}></i>
-                                {student.gender === 'M' ? 'Masculino' : 'Femenino'}
+                              <span className={`badge ${student.gender === 'MALE' ? 'bg-info' : 'bg-pink'}`}>
+                                <i className={`fas fa-${student.gender === 'MALE' ? 'mars' : 'venus'} me-1`}></i>
+                                {student.gender === 'MALE' ? 'Masculino' : 'Femenino'}
                               </span>
+                            </td>
+                            <td data-label="Estado">
+                              <Badge 
+                                bg={
+                                  student.status === 'ACTIVE' ? 'success' :
+                                  student.status === 'INACTIVE' ? 'secondary' :
+                                  student.status === 'TRANSFERRED' ? 'warning' :
+                                  student.status === 'GRADUATED' ? 'primary' :
+                                  'danger'
+                                }
+                              >
+                                {
+                                  student.status === 'ACTIVE' ? 'Activo' :
+                                  student.status === 'INACTIVE' ? 'Inactivo' :
+                                  student.status === 'TRANSFERRED' ? 'Transferido' :
+                                  student.status === 'GRADUATED' ? 'Graduado' :
+                                  student.status === 'DECEASED' ? 'Fallecido' :
+                                  student.status
+                                }
+                              </Badge>
                             </td>
                             <td data-label="Contacto">
                               <div className="contact-info">
@@ -415,7 +614,7 @@ const StudentList = () => {
                                   <i className="fas fa-edit me-1"></i>
                                   Editar
                                 </Button>
-                                {student.status === 'A' ? (
+                                {student.status === 'ACTIVE' ? (
                                   <Button
                                     variant="danger"
                                     size="sm"
@@ -467,10 +666,18 @@ const StudentList = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4">
-          {selectedStudent && (
+          {loadingDetails ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Cargando...</span>
+              </div>
+              <p className="mt-3 text-muted">Cargando detalles del estudiante...</p>
+            </div>
+          ) : selectedStudent ? (
             <div>
+              {/* Información Personal */}
               <Card className="mb-4 border-0 shadow-sm">
-                <Card.Header className="bg-light">
+                <Card.Header className="bg-primary text-white">
                   <h5 className="mb-0">
                     <i className="fas fa-user me-2"></i>
                     Información Personal
@@ -480,55 +687,54 @@ const StudentList = () => {
                   <Row>
                     <Col md={6}>
                       <div className="mb-3">
-                        <label className="text-muted small">Nombre Completo</label>
-                        <p className="h6">{`${selectedStudent.firstName} ${selectedStudent.lastName}`}</p>
+                        <label className="text-muted small fw-bold">ID del Estudiante</label>
+                        <p className="h6 text-monospace">{selectedStudent.id || 'No disponible'}</p>
                       </div>
                       <div className="mb-3">
-                        <label className="text-muted small">Documento</label>
+                        <label className="text-muted small fw-bold">Nombres</label>
+                        <p className="h6">{selectedStudent.firstName || 'No especificado'}</p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Apellidos</label>
+                        <p className="h6">{selectedStudent.lastName || 'No especificado'}</p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Tipo de Documento</label>
                         <p className="h6">
                           <span className="badge bg-light text-dark">
                             <i className="fas fa-id-card me-2"></i>
-                            {`${selectedStudent.documentType} - ${selectedStudent.documentNumber}`}
+                            {formatDocumentType(selectedStudent.documentType)}
                           </span>
                         </p>
                       </div>
                       <div className="mb-3">
-                        <label className="text-muted small">Fecha de Nacimiento</label>
+                        <label className="text-muted small fw-bold">Número de Documento</label>
+                        <p className="h6">{selectedStudent.documentNumber || 'No especificado'}</p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Fecha de Nacimiento</label>
                         <p className="h6">
                           <i className="fas fa-birthday-cake me-2 text-muted"></i>
-                          {new Date(selectedStudent.birthDate).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
+                          {formatDate(selectedStudent.birthDate)}
                         </p>
                       </div>
                     </Col>
                     <Col md={6}>
                       <div className="mb-3">
-                        <label className="text-muted small">Género</label>
+                        <label className="text-muted small fw-bold">Género</label>
                         <p className="h6">
-                          <span className={`badge ${selectedStudent.gender === 'M' ? 'bg-info' : 'bg-pink'}`}>
-                            <i className={`fas fa-${selectedStudent.gender === 'M' ? 'mars' : 'venus'} me-1`}></i>
-                            {selectedStudent.gender === 'M' ? 'Masculino' : 'Femenino'}
+                          <span className={`badge ${selectedStudent.gender === 'MALE' ? 'bg-info' : 'bg-pink'}`}>
+                            <i className={`fas fa-${selectedStudent.gender === 'MALE' ? 'mars' : 'venus'} me-1`}></i>
+                            {formatGender(selectedStudent.gender)}
                           </span>
                         </p>
                       </div>
                       <div className="mb-3">
-                        <label className="text-muted small">Estado</label>
+                        <label className="text-muted small fw-bold">Estado</label>
                         <p className="h6">
-                          <span className={`badge ${selectedStudent.status === 'A' ? 'bg-success' : 'bg-danger'}`}>
-                            <i className={`fas fa-${selectedStudent.status === 'A' ? 'check-circle' : 'times-circle'} me-1`}></i>
-                            {selectedStudent.status === 'A' ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </p>
-                      </div>
-                      <div className="mb-3">
-                        <label className="text-muted small">Código QR</label>
-                        <p className="h6">
-                          <span className="badge bg-dark">
-                            <i className="fas fa-qrcode me-2"></i>
-                            {selectedStudent.nameQr}
+                          <span className={`badge ${selectedStudent.status === 'ACTIVE' ? 'bg-success' : 'bg-danger'}`}>
+                            <i className={`fas fa-${selectedStudent.status === 'ACTIVE' ? 'check-circle' : 'times-circle'} me-1`}></i>
+                            {formatStatus(selectedStudent.status)}
                           </span>
                         </p>
                       </div>
@@ -537,48 +743,45 @@ const StudentList = () => {
                 </Card.Body>
               </Card>
 
+              {/* Información de Ubicación */}
               <Card className="mb-4 border-0 shadow-sm">
-                <Card.Header className="bg-light">
+                <Card.Header className="bg-info text-white">
                   <h5 className="mb-0">
-                    <i className="fas fa-address-card me-2"></i>
-                    Información de Contacto
+                    <i className="fas fa-map-marker-alt me-2"></i>
+                    Información de Ubicación
                   </h5>
                 </Card.Header>
                 <Card.Body>
                   <Row>
                     <Col md={6}>
                       <div className="mb-3">
-                        <label className="text-muted small">Email</label>
+                        <label className="text-muted small fw-bold">Dirección</label>
                         <p className="h6">
-                          <i className="fas fa-envelope me-2 text-muted"></i>
-                          <a href={`mailto:${selectedStudent.email}`} className="text-primary">
-                            {selectedStudent.email}
-                          </a>
-                        </p>
-                      </div>
-                      <div className="mb-3">
-                        <label className="text-muted small">Teléfono</label>
-                        <p className="h6">
-                          <i className="fas fa-phone me-2 text-muted"></i>
-                          <a href={`tel:${selectedStudent.phone}`} className="text-primary">
-                            {selectedStudent.phone}
-                          </a>
-                        </p>
-                      </div>
-                    </Col>
-                    <Col md={6}>
-                      <div className="mb-3">
-                        <label className="text-muted small">Dirección</label>
-                        <p className="h6">
-                          <i className="fas fa-map-marker-alt me-2 text-muted"></i>
+                          <i className="fas fa-home me-2 text-muted"></i>
                           {selectedStudent.address || 'No especificada'}
                         </p>
                       </div>
                       <div className="mb-3">
-                        <label className="text-muted small">Ciudad</label>
+                        <label className="text-muted small fw-bold">Distrito</label>
+                        <p className="h6">
+                          <i className="fas fa-map me-2 text-muted"></i>
+                          {selectedStudent.district || 'No especificado'}
+                        </p>
+                      </div>
+                    </Col>
+                    <Col md={6}>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Provincia</label>
                         <p className="h6">
                           <i className="fas fa-city me-2 text-muted"></i>
-                          {selectedStudent.city || 'No especificada'}
+                          {selectedStudent.province || 'No especificada'}
+                        </p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Departamento</label>
+                        <p className="h6">
+                          <i className="fas fa-globe-americas me-2 text-muted"></i>
+                          {selectedStudent.department || 'No especificado'}
                         </p>
                       </div>
                     </Col>
@@ -586,58 +789,159 @@ const StudentList = () => {
                 </Card.Body>
               </Card>
 
-              <Card className="border-0 shadow-sm">
-                <Card.Header className="bg-light">
+              {/* Información de Contacto del Estudiante */}
+              <Card className="mb-4 border-0 shadow-sm">
+                <Card.Header className="bg-success text-white">
                   <h5 className="mb-0">
-                    <i className="fas fa-info-circle me-2"></i>
-                    Información Adicional
+                    <i className="fas fa-address-card me-2"></i>
+                    Contacto del Estudiante
                   </h5>
                 </Card.Header>
                 <Card.Body>
                   <Row>
                     <Col md={6}>
                       <div className="mb-3">
-                        <label className="text-muted small">Fecha de Registro</label>
+                        <label className="text-muted small fw-bold">Teléfono</label>
                         <p className="h6">
-                          <i className="fas fa-calendar-plus me-2 text-muted"></i>
-                          {new Date(selectedStudent.createdAt).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
-                        </p>
-                      </div>
-                      <div className="mb-3">
-                        <label className="text-muted small">Última Actualización</label>
-                        <p className="h6">
-                          <i className="fas fa-calendar-check me-2 text-muted"></i>
-                          {new Date(selectedStudent.updatedAt).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
+                          <i className="fas fa-phone me-2 text-muted"></i>
+                          {selectedStudent.phone ? (
+                            <a href={`tel:${selectedStudent.phone}`} className="text-primary">
+                              {selectedStudent.phone}
+                            </a>
+                          ) : (
+                            <span className="text-muted">No especificado</span>
+                          )}
                         </p>
                       </div>
                     </Col>
                     <Col md={6}>
                       <div className="mb-3">
-                        <label className="text-muted small">Institución</label>
+                        <label className="text-muted small fw-bold">Email</label>
                         <p className="h6">
-                          <i className="fas fa-school me-2 text-muted"></i>
-                          {selectedStudent.institutionId || 'No especificada'}
-                        </p>
-                      </div>
-                      <div className="mb-3">
-                        <label className="text-muted small">Observaciones</label>
-                        <p className="h6">
-                          <i className="fas fa-comment me-2 text-muted"></i>
-                          {selectedStudent.observations || 'Sin observaciones'}
+                          <i className="fas fa-envelope me-2 text-muted"></i>
+                          {selectedStudent.email ? (
+                            <a href={`mailto:${selectedStudent.email}`} className="text-primary">
+                              {selectedStudent.email}
+                            </a>
+                          ) : (
+                            <span className="text-muted">No especificado</span>
+                          )}
                         </p>
                       </div>
                     </Col>
                   </Row>
                 </Card.Body>
               </Card>
+
+              {/* Información del Tutor/Apoderado */}
+              <Card className="mb-4 border-0 shadow-sm">
+                <Card.Header className="bg-warning text-dark">
+                  <h5 className="mb-0">
+                    <i className="fas fa-user-shield me-2"></i>
+                    Información del Tutor/Apoderado
+                  </h5>
+                </Card.Header>
+                <Card.Body>
+                  <Row>
+                    <Col md={6}>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Nombres del Tutor</label>
+                        <p className="h6">{selectedStudent.guardianName || 'No especificado'}</p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Apellidos del Tutor</label>
+                        <p className="h6">{selectedStudent.guardianLastName || 'No especificado'}</p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Tipo de Documento del Tutor</label>
+                        <p className="h6">
+                          <span className="badge bg-secondary">
+                            <i className="fas fa-id-card me-2"></i>
+                            {formatDocumentType(selectedStudent.guardianDocumentType)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Número de Documento del Tutor</label>
+                        <p className="h6">{selectedStudent.guardianDocumentNumber || 'No especificado'}</p>
+                      </div>
+                    </Col>
+                    <Col md={6}>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Teléfono del Tutor</label>
+                        <p className="h6">
+                          <i className="fas fa-phone me-2 text-muted"></i>
+                          {selectedStudent.guardianPhone ? (
+                            <a href={`tel:${selectedStudent.guardianPhone}`} className="text-primary">
+                              {selectedStudent.guardianPhone}
+                            </a>
+                          ) : (
+                            <span className="text-muted">No especificado</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Email del Tutor</label>
+                        <p className="h6">
+                          <i className="fas fa-envelope me-2 text-muted"></i>
+                          {selectedStudent.guardianEmail ? (
+                            <a href={`mailto:${selectedStudent.guardianEmail}`} className="text-primary">
+                              {selectedStudent.guardianEmail}
+                            </a>
+                          ) : (
+                            <span className="text-muted">No especificado</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Relación con el Estudiante</label>
+                        <p className="h6">
+                          <span className="badge bg-info">
+                            <i className="fas fa-heart me-2"></i>
+                            {formatRelationship(selectedStudent.guardianRelationship)}
+                          </span>
+                        </p>
+                      </div>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+
+              {/* Información del Sistema */}
+              <Card className="border-0 shadow-sm">
+                <Card.Header className="bg-dark text-white">
+                  <h5 className="mb-0">
+                    <i className="fas fa-cogs me-2"></i>
+                    Información del Sistema
+                  </h5>
+                </Card.Header>
+                <Card.Body>
+                  <Row>
+                    <Col md={6}>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Fecha de Registro</label>
+                        <p className="h6">
+                          <i className="fas fa-calendar-plus me-2 text-muted"></i>
+                          {formatDateTime(selectedStudent.createdAt)}
+                        </p>
+                      </div>
+                    </Col>
+                    <Col md={6}>
+                      <div className="mb-3">
+                        <label className="text-muted small fw-bold">Última Actualización</label>
+                        <p className="h6">
+                          <i className="fas fa-calendar-check me-2 text-muted"></i>
+                          {formatDateTime(selectedStudent.updatedAt)}
+                        </p>
+                      </div>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-5">
+              <p className="text-muted">No se pudieron cargar los detalles del estudiante</p>
             </div>
           )}
         </Modal.Body>
