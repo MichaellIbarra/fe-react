@@ -265,7 +265,7 @@ class AdminUserService {
       documentType: userData.documentType,
       documentNumber: userData.documentNumber?.trim(),
       phone: userData.phone?.trim() || null,
-      status: userData.status || 'ACTIVE'
+      status: userData.status || 'A'
     };
 
     // No incluir password para que se genere automáticamente
