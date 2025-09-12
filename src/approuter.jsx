@@ -7,10 +7,14 @@ import StudentList from "./pages/students/StudentList";
 import AddStudent from "./pages/students/AddStudent";
 import EditStudent from "./pages/students/EditStudent";
 import StudentProfile from "./pages/students/StudentProfile";
+import EnrollmentStats from "./pages/students/EnrollmentStats";
+import NotEnrolledStudents from "./pages/students/NotEnrolledStudents";
+import BulkUploadStudents from "./pages/students/BulkUploadStudents";
 //Enrollments
-import EnrollmentList from "./pages/enrollments/EnrollmentList";
-import AddEnrollment from "./pages/enrollments/AddEnrollment";
+import EnrollmentList from "./pages/enrollments/EnrollmentListNew";
+import AddEnrollment from "./pages/enrollments/AddEnrollmentNew";
 import EditEnrollment from "./pages/enrollments/EditEnrollment";
+import BulkUploadEnrollments from "./pages/enrollments/BulkUploadEnrollments";
 //Grades
 import { GradeList, AddGrade, EditGrade } from "./pages/grade";
 //Notifications
@@ -71,13 +75,28 @@ const Approuter = () => {
           {/* Reports Routes */}
           <Route path="/reports/institutions-headquarters" element={<InstitutionHeadquartersReport />} />
 
+          {/* Student Routes */}
+          <Route path="/students" element={<StudentList />} />
           <Route path="/studentlist" element={<StudentList />} />
+          <Route path="/students/add" element={<AddStudent />} />
           <Route path="/add-student" element={<AddStudent />} />
+          <Route path="/students/edit/:id" element={<EditStudent />} />
           <Route path="/editstudent/:id" element={<EditStudent />} />
+          <Route path="/students/view/:id" element={<StudentProfile />} />
           <Route path="/studentprofile/:id" element={<StudentProfile />} />
+          <Route path="/students/statistics" element={<EnrollmentStats />} />
+          <Route path="/students/enrollment-stats" element={<EnrollmentStats />} />
+          <Route path="/students/not-enrolled" element={<NotEnrolledStudents />} />
+          <Route path="/students/bulk-upload" element={<BulkUploadStudents />} />
+
+          {/* Enrollment Routes */}
+          <Route path="/enrollments" element={<EnrollmentList />} />
           <Route path="/enrollmentlist" element={<EnrollmentList />} />
+          <Route path="/enrollments/add" element={<AddEnrollment />} />
           <Route path="/add-enrollment" element={<AddEnrollment />} />
+          <Route path="/enrollments/edit/:id" element={<EditEnrollment />} />
           <Route path="/editenrollment/:id" element={<EditEnrollment />} />
+          <Route path="/enrollments/bulk-upload" element={<BulkUploadEnrollments />} />
 
           {/* Grade Routes */}
           <Route path="/grade" element={<GradeList />} />
